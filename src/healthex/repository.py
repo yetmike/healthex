@@ -37,5 +37,5 @@ def upsert_sleep(database_url: str, rows: list[dict[str, Any]]) -> int:
                 },
             )
         )
-        result = session.execute(stmt)
-        return int(result.rowcount)  # type: ignore[attr-defined]
+        result = session.execute(stmt.returning(SleepSession.id))
+        return len(result.fetchall())

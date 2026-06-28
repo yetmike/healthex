@@ -3,56 +3,67 @@
 from __future__ import annotations
 
 import hashlib
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 
-def _int(val: Any) -> int | None:  # noqa: ANN401
-    """Return int or None."""
-    return int(val) if val is not None else None
-
-
-def _float(val: Any) -> float | None:  # noqa: ANN401
-    """Return float or None."""
-    return float(val) if val is not None else None
-
-
-def parse_session(point: dict[str, Any], user_id: str = "me") -> dict[str, Any]:
+def parse_session(point: dict[str, Any], user_id: str | None = None) -> dict[str, Any]:
     """
-    Map a single sleep dataPoint from the Google Health API into a dict that matches
-    the sleep_sessions table columns.
+    Map a single sleep dataPoint from the Google Health API v4 into a dict that
+    matches the sleep_sessions table columns.
 
-    The exact JSON shape should be confirmed via the OAuth Playground (plan §3g) before
-    hardening column mappings.  Fields that aren't present in the API response are left
-    as None so the schema's nullable columns absorb them gracefully.
+    Real API shape (confirmed 2026-06-28):
+      point.name            = "users/<uid>/dataTypes/sleep/dataPoints/<id>"
+      point.dataSource.platform = "FITBIT"
+      point.sleep.interval.startTime / endTime  (UTC ISO-8601)
+      point.sleep.interval.startUtcOffset        e.g. "7200s"
+      point.sleep.type       = "STAGES" | "CLASSIC"
+      point.sleep.summary.minutesAsleep / minutesAwake / minutesInSleepPeriod  (strings)
+      point.sleep.summary.stagesSummary = [{type, minutes (str), count (str)}, ...]
+      No efficiency or sleep_score in the API response.
     """
-    # Top-level interval
-    interval: dict[str, Any] = point.get("interval", {})
+    # Extract user_id from the resource name if not provided
+    name: str = point.get("name", "")
+    if user_id is None:
+        parts = name.split("/")
+        user_id = parts[1] if len(parts) > 1 else "me"
+
+    sleep: dict[str, Any] = point.get("sleep", {})
+    interval: dict[str, Any] = sleep.get("interval", {})
+
     start_time: str = interval.get("startTime", "")
     end_time: str = interval.get("endTime", "")
+    utc_offset_str: str = interval.get("startUtcOffset", "0s")
 
-    # Stable ID: hash of (user_id, start_time) so re-fetching the same point is idempotent
+    civil_date = _civil_date(start_time, utc_offset_str)
+
+    # Stable row ID: hash of (user_id, start_time)
     row_id = hashlib.sha256(f"{user_id}|{start_time}".encode()).hexdigest()[:32]
 
-    # The API returns a "civil_date" field for the night boundary (e.g. "2026-06-27")
-    civil_date: str | None = point.get("civil_date") or point.get("civilDate")
+    sleep_type: str | None = sleep.get("type")  # "STAGES" | "CLASSIC"
 
-    # Top-level summary; field names may differ — verify against real response
-    summary: dict[str, Any] = point.get("summary", {})
-    sleep_type: str | None = point.get("sleepType") or point.get("type")
-    source_platform: str | None = _extract_source(point)
+    source_platform: str | None = None
+    ds: Any = point.get("dataSource", {})
+    if isinstance(ds, dict):
+        source_platform = ds.get("platform") or ds.get("recordingMethod")
 
-    # Duration fields — common names seen in legacy Fitbit API migration guide
-    duration_seconds = _int(summary.get("durationSeconds") or summary.get("duration_seconds"))
-    minutes_asleep = _int(summary.get("minutesAsleep") or summary.get("minutes_asleep"))
-    minutes_awake = _int(summary.get("minutesAwake") or summary.get("minutes_awake"))
-    efficiency = _float(summary.get("efficiency"))
-    sleep_score = _int(summary.get("sleepScore") or summary.get("sleep_score"))
+    summary: dict[str, Any] = sleep.get("summary", {})
+    minutes_asleep = _int(summary.get("minutesAsleep"))
+    minutes_awake = _int(summary.get("minutesAwake"))
+    duration_seconds = _int(summary.get("minutesInSleepPeriod"), scale=60)
 
-    # Stage breakdown lives under stages or summary.stages
-    stages: dict[str, Any] = summary.get("stages", {})
-    minutes_light = _int(stages.get("light") or stages.get("minutesLight"))
-    minutes_deep = _int(stages.get("deep") or stages.get("minutesDeep"))
-    minutes_rem = _int(stages.get("rem") or stages.get("minutesRem"))
+    # stages: [{type, minutes, count}, ...]
+    stages_map: dict[str, int] = {}
+    for stage in summary.get("stagesSummary", []):
+        t = str(stage.get("type", "")).upper()
+        stages_map[t] = int(stage.get("minutes", 0))
+
+    minutes_light = stages_map.get("LIGHT")
+    minutes_deep = stages_map.get("DEEP")
+    minutes_rem = stages_map.get("REM")
+    # AWAKE in stages vs top-level minutesAwake — prefer top-level
+    if minutes_awake is None:
+        minutes_awake = stages_map.get("AWAKE")
 
     return {
         "id": row_id,
@@ -67,16 +78,34 @@ def parse_session(point: dict[str, Any], user_id: str = "me") -> dict[str, Any]:
         "minutes_light": minutes_light,
         "minutes_deep": minutes_deep,
         "minutes_rem": minutes_rem,
-        "efficiency": efficiency,
-        "sleep_score": sleep_score,
+        "efficiency": None,   # not in API
+        "sleep_score": None,  # not in API
         "source_platform": source_platform,
-        "raw": point,  # full raw payload stored as JSONB
+        "raw": point,
     }
 
 
-def _extract_source(point: dict[str, Any]) -> str | None:
-    """Best-effort extraction of source platform (e.g. 'FITBIT', 'PIXEL_WATCH')."""
-    ds = point.get("dataSource") or point.get("data_source") or {}
-    if isinstance(ds, dict):
-        return str(ds.get("type") or ds.get("dataStreamName") or "") or None
-    return None
+def _int(val: Any, scale: int = 1) -> int | None:
+    """Convert a string/int value to int, optionally multiplying by scale."""
+    if val is None:
+        return None
+    try:
+        return int(val) * scale
+    except (ValueError, TypeError):
+        return None
+
+
+def _civil_date(start_time_utc: str, utc_offset_str: str) -> str | None:
+    """
+    Compute the local calendar date for the night boundary.
+    startTime is UTC; utcOffset is like "7200s" (seconds east of UTC).
+    """
+    if not start_time_utc:
+        return None
+    try:
+        dt = datetime.fromisoformat(start_time_utc.replace("Z", "+00:00"))
+        offset_seconds = int(utc_offset_str.rstrip("s"))
+        local_dt = dt + timedelta(seconds=offset_seconds)
+        return local_dt.date().isoformat()
+    except (ValueError, AttributeError):
+        return None

@@ -14,17 +14,22 @@ class HealthClient:
         )
 
     def list_sleep(self, since_iso: str) -> list[dict[str, object]]:
-        """Return all sleep dataPoints on or after *since_iso* (ISO-8601 local time)."""
+        """
+        Return all sleep dataPoints on or after *since_iso* (UTC ISO-8601).
+
+        The API does not support server-side date range filters, so we paginate
+        all results and filter client-side by sleep.interval.startTime.
+        """
         points: list[dict[str, object]] = []
-        params: dict[str, str] = {
-            "filter": f'sleep.interval.civil_start_time >= "{since_iso}"',
-            "pageSize": "50",
-        }
+        params: dict[str, str] = {"pageSize": "50"}
         while True:
             r = self._c.get("/users/me/dataTypes/sleep/dataPoints", params=params)
             r.raise_for_status()
             body = r.json()
-            points.extend(body.get("dataPoints", []))
+            for p in body.get("dataPoints", []):
+                start = str(p.get("sleep", {}).get("interval", {}).get("startTime", ""))
+                if start >= since_iso:
+                    points.append(p)
             token = body.get("nextPageToken")
             if not token:
                 return points
