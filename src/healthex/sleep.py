@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Any
 
 
@@ -20,9 +20,8 @@ def parse_session(point: dict[str, Any], user_id: str | None = None) -> dict[str
       point.sleep.type       = "STAGES" | "CLASSIC"
       point.sleep.summary.minutesAsleep / minutesAwake / minutesInSleepPeriod  (strings)
       point.sleep.summary.stagesSummary = [{type, minutes (str), count (str)}, ...]
-      No efficiency or sleep_score in the API response.
+      No efficiency or sleep_score in the API — both are derived here.
     """
-    # Extract user_id from the resource name if not provided
     name: str = point.get("name", "")
     if user_id is None:
         parts = name.split("/")
@@ -36,8 +35,6 @@ def parse_session(point: dict[str, Any], user_id: str | None = None) -> dict[str
     utc_offset_str: str = interval.get("startUtcOffset", "0s")
 
     civil_date = _civil_date(start_time, utc_offset_str)
-
-    # Stable row ID: hash of (user_id, start_time)
     row_id = hashlib.sha256(f"{user_id}|{start_time}".encode()).hexdigest()[:32]
 
     sleep_type: str | None = sleep.get("type")  # "STAGES" | "CLASSIC"
@@ -53,14 +50,6 @@ def parse_session(point: dict[str, Any], user_id: str | None = None) -> dict[str
     minutes_in_period = _int(summary.get("minutesInSleepPeriod"))
     duration_seconds = minutes_in_period * 60 if minutes_in_period is not None else None
 
-    # Derive efficiency = asleep / in_period * 100 (API doesn't provide it)
-    efficiency = (
-        round(minutes_asleep / minutes_in_period * 100, 2)
-        if minutes_asleep is not None and minutes_in_period and minutes_in_period > 0
-        else None
-    )
-
-    # stages: [{type, minutes, count}, ...]
     stages_map: dict[str, int] = {}
     for stage in summary.get("stagesSummary", []):
         t = str(stage.get("type", "")).upper()
@@ -69,9 +58,12 @@ def parse_session(point: dict[str, Any], user_id: str | None = None) -> dict[str
     minutes_light = stages_map.get("LIGHT")
     minutes_deep = stages_map.get("DEEP")
     minutes_rem = stages_map.get("REM")
-    # AWAKE in stages vs top-level minutesAwake — prefer top-level
     if minutes_awake is None:
         minutes_awake = stages_map.get("AWAKE")
+
+    # Derived metrics (not in API)
+    efficiency = _derive_efficiency(minutes_asleep, minutes_in_period)
+    sleep_score = _derive_sleep_score(minutes_asleep, minutes_in_period, minutes_deep, minutes_rem)
 
     return {
         "id": row_id,
@@ -86,15 +78,55 @@ def parse_session(point: dict[str, Any], user_id: str | None = None) -> dict[str
         "minutes_light": minutes_light,
         "minutes_deep": minutes_deep,
         "minutes_rem": minutes_rem,
-        "efficiency": efficiency,  # derived: minutes_asleep / minutes_in_period * 100
-        "sleep_score": None,       # not in API
+        "efficiency": efficiency,
+        "sleep_score": sleep_score,
         "source_platform": source_platform,
         "raw": point,
     }
 
 
+def _derive_efficiency(minutes_asleep: int | None, minutes_in_period: int | None) -> float | None:
+    """minutes_asleep / minutes_in_period * 100, rounded to 2 dp."""
+    if minutes_asleep is None or not minutes_in_period:
+        return None
+    return round(minutes_asleep / minutes_in_period * 100, 2)
+
+
+def _derive_sleep_score(
+    minutes_asleep: int | None,
+    minutes_in_period: int | None,
+    minutes_deep: int | None,
+    minutes_rem: int | None,
+) -> int | None:
+    """
+    Proxy 0-100 sleep score approximating Fitbit's algorithm from available fields.
+
+    Components:
+      Duration    (0-40): minutes_asleep scaled to 8h target
+      Efficiency  (0-30): minutes_asleep / minutes_in_period
+      Stage quality (0-30): (deep + REM) as % of asleep, target ~45%
+
+    Not the actual Fitbit score (which also uses HR and SpO2 not in the API).
+    """
+    if minutes_asleep is None or not minutes_in_period:
+        return None
+
+    # Duration: 480 min (8h) = full 40 pts, linear below
+    duration_score = min(minutes_asleep / 480 * 40, 40.0)
+
+    # Efficiency
+    efficiency_score = (minutes_asleep / minutes_in_period) * 30
+
+    # Stage quality: deep + REM vs asleep time, ideal ~45%
+    stage_score = 0.0
+    if minutes_deep is not None and minutes_rem is not None and minutes_asleep > 0:
+        deep_rem_pct = (minutes_deep + minutes_rem) / minutes_asleep
+        stage_score = min(deep_rem_pct / 0.45 * 30, 30.0)
+
+    return min(max(round(duration_score + efficiency_score + stage_score), 0), 100)
+
+
 def _int(val: Any, scale: int = 1) -> int | None:
-    """Convert a string/int value to int, optionally multiplying by scale."""
     if val is None:
         return None
     try:
@@ -104,10 +136,6 @@ def _int(val: Any, scale: int = 1) -> int | None:
 
 
 def _civil_date(start_time_utc: str, utc_offset_str: str) -> str | None:
-    """
-    Compute the local calendar date for the night boundary.
-    startTime is UTC; utcOffset is like "7200s" (seconds east of UTC).
-    """
     if not start_time_utc:
         return None
     try:

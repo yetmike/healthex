@@ -13,7 +13,7 @@ def test_list_sleep_single_page() -> None:
         return_value=httpx.Response(
             200,
             json={
-                "dataPoints": [{"interval": {"startTime": "2026-06-27T23:00:00Z"}}],
+                "dataPoints": [{"sleep": {"interval": {"startTime": "2026-06-27T23:00:00Z"}}}],
             },
         )
     )
@@ -28,13 +28,13 @@ def test_list_sleep_paginates() -> None:
         httpx.Response(
             200,
             json={
-                "dataPoints": [{"interval": {"startTime": "2026-06-26T23:00:00Z"}}],
+                "dataPoints": [{"sleep": {"interval": {"startTime": "2026-06-26T23:00:00Z"}}}],
                 "nextPageToken": "tok123",
             },
         ),
         httpx.Response(
             200,
-            json={"dataPoints": [{"interval": {"startTime": "2026-06-27T23:00:00Z"}}]},
+            json={"dataPoints": [{"sleep": {"interval": {"startTime": "2026-06-27T23:00:00Z"}}}]},
         ),
     ]
     route = respx.get(f"{BASE}/users/me/dataTypes/sleep/dataPoints").mock(

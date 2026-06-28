@@ -1,5 +1,7 @@
 """Unit tests for sleep.parse_session — no network or DB required."""
 
+import pytest
+
 from healthex.sleep import parse_session
 
 # Mirrors the real Google Health API v4 response shape (confirmed 2026-06-28)
@@ -43,8 +45,9 @@ def test_parse_session_basic() -> None:
     assert row["minutes_light"] == 363
     assert row["minutes_deep"] == 55
     assert row["minutes_rem"] == 86
-    assert row["efficiency"] is None
-    assert row["sleep_score"] is None
+    assert row["efficiency"] == pytest.approx(96.55, abs=0.1)  # 504/522*100
+    assert isinstance(row["sleep_score"], int)
+    assert 0 <= row["sleep_score"] <= 100
     assert row["source_platform"] == "FITBIT"
     assert row["raw"] is SAMPLE_POINT
 
@@ -74,4 +77,4 @@ def test_parse_session_missing_fields_are_none() -> None:
     assert row["minutes_asleep"] is None
     assert row["efficiency"] is None
     assert row["sleep_score"] is None
-    assert row["civil_date"] == "2026-06-26"  # no offset → UTC, date is Jun 26
+    assert row["civil_date"] == "2026-06-26"
