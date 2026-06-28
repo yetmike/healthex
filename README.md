@@ -1,6 +1,24 @@
 # healthex
 
-Open-source Python CLI that exports Google Health (Fitbit / Pixel Watch) sleep data to PostgreSQL.
+Python CLI that syncs Google Health data (sleep, steps, RHR, HRV) from Fitbit or Pixel Watch devices to PostgreSQL.
+
+Designed to feed a Grafana dashboard but works with any SQL tool.
+
+## Features
+
+- Sleep sessions with stage breakdown (light / deep / REM / awake)
+- Daily step counts
+- Resting Heart Rate (RHR) — calculated from sleep via Fitbit
+- Heart Rate Variability (HRV) — RMSSD measured during sleep
+- Idempotent upserts — safe to re-run, no duplicates
+- Secrets scan and type checking in pre-commit hooks
+
+## Requirements
+
+- Python 3.12+
+- [`uv`](https://docs.astral.sh/uv/)
+- PostgreSQL 15+
+- A Google account with health data synced from a Fitbit or Pixel Watch device
 
 ## Quick start
 
@@ -8,81 +26,62 @@ Open-source Python CLI that exports Google Health (Fitbit / Pixel Watch) sleep d
 # 1. Install
 uv sync
 
-# 2. Configure (copy and fill in your values)
+# 2. Configure
 cp .env.example .env
+# edit .env: set DATABASE_URL for your Postgres instance
 
-# 3. Authenticate with Google
-healthex auth login
+# 3. Set up Google API credentials (see below)
 
-# 4. Sync sleep data
-healthex sync --since "2026-06-01T00:00:00"
+# 4. Authenticate
+uv run healthex auth login
+
+# 5. Create tables
+uv run healthex db-init
+
+# 6. Sync data
+uv run healthex sync --since "2024-01-01T00:00:00"
 ```
 
-## Setup
+## Google API credentials
 
-### Prerequisites
-- Python 3.12+
-- `uv` — install from https://docs.astral.sh/uv/
-- A Google account with sleep data synced from a Fitbit or Pixel Watch device
-- A PostgreSQL database (see below)
+1. Go to [Google Cloud Console](https://console.cloud.google.com) and create a project.
+2. Enable the **Google Health API**.
+3. Create an OAuth consent screen — External, add your account as a Test user, add these scopes:
+   - `https://www.googleapis.com/auth/googlehealth.sleep.readonly`
+   - `https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly`
+   - `https://www.googleapis.com/auth/googlehealth.health_metrics_and_measurements.readonly`
+4. Create an **OAuth Client ID** (Desktop app), download `client_secret.json` to the project root.
+5. Run `uv run healthex auth login` — opens a browser, you consent, token is cached to `token.json`.
 
-### Database options
-
-**Local (fast, offline — for dev/testing):**
-```bash
-docker compose up -d
-# DATABASE_URL=postgresql+psycopg://healthex:healthex@localhost:5432/healthex
-```
-
-**Homelab (persistent — for real data + Grafana visualization):**
-```
-DATABASE_URL=postgresql+psycopg://healthex:<pw>@pg.yetmike.com:5432/healthex
-```
-`pg.yetmike.com` resolves to the Traefik LoadBalancer IP via external-dns/pihole.
-See the homelab repo for deployment instructions.
-
-### Schema migration
-```bash
-uv run alembic upgrade head
-# or use the CLI shortcut:
-healthex db-migrate
-```
-
-### Getting Google API credentials
-
-> See `healthex-mvp-plan.md` §3 for the full step-by-step walkthrough.
-
-1. Create a Google Cloud project and enable the **Google Health API**.
-2. Create an OAuth consent screen (External, add yourself as Test user, add scope
-   `https://www.googleapis.com/auth/googlehealth.sleep.readonly`).
-3. Create an OAuth Client ID (Desktop app), download `client_secret.json` to the project root.
-4. Run `healthex auth login` — it opens a browser, you consent, tokens are cached to `token.json`.
-
-> **Note:** With restricted scopes in Testing mode, refresh tokens expire ~weekly. Run
-> `healthex auth login` again when that happens.
+> With restricted scopes in Testing mode, refresh tokens expire roughly weekly. Run `healthex auth login` again when that happens.
 
 ## Commands
 
 | Command | Description |
 |---|---|
-| `healthex auth login` | OAuth flow — opens browser, caches tokens |
-| `healthex sync --since ISO_DATE` | Fetch + upsert sleep data |
-| `healthex db-migrate` | Run Alembic migrations |
+| `healthex auth login` | OAuth flow - opens browser, caches token |
+| `healthex db-init` | Create tables (idempotent) |
+| `healthex sync --since ISO_DATE` | Fetch and upsert all data types |
+
+## Local database (for development)
+
+```bash
+docker compose up -d
+# DATABASE_URL=postgresql+psycopg://healthex:healthex@localhost:5432/healthex
+```
 
 ## Development
 
 ```bash
 uv sync --dev
+uv run pre-commit install
 uv run pytest
 uv run ruff check .
 uv run mypy src
 ```
 
-Pre-commit hooks (lint, format, type-check, secrets scan):
-```bash
-uv run pre-commit install
-```
+See [CONTRIBUTING.md](CONTRIBUTING.md) for more detail.
 
 ## License
 
-Apache-2.0
+[Apache-2.0](LICENSE)
