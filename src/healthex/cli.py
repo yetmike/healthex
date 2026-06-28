@@ -2,7 +2,7 @@
 
 import typer
 
-from healthex import auth, client, repository
+from healthex import auth, client, heart, repository
 from healthex import sleep as sleep_mod
 from healthex import steps as steps_mod
 from healthex.config import settings
@@ -24,7 +24,7 @@ def sync(
     since: str = typer.Option(..., help='ISO-8601 local start time, e.g. "2026-06-01T00:00:00"'),
     user_id: str = typer.Option("me", help="User identifier stored in the DB (default: me)."),
 ) -> None:
-    """Fetch sleep data from Google Health and upsert it into PostgreSQL."""
+    """Fetch sleep, steps, RHR and HRV from Google Health and upsert into PostgreSQL."""
     creds = auth.get_credentials(settings.google_client_secret_file, settings.healthex_token_file)
     with client.HealthClient(str(creds.token)) as hc:
         raw_points = hc.list_sleep(since)
@@ -33,6 +33,16 @@ def sync(
         except Exception as e:  # noqa: BLE001
             typer.echo(f"Steps fetch skipped: {e}", err=True)
             step_points = []
+        try:
+            rhr_points = hc.list_daily("daily-resting-heart-rate")
+        except Exception as e:  # noqa: BLE001
+            typer.echo(f"RHR fetch skipped: {e}", err=True)
+            rhr_points = []
+        try:
+            hrv_points = hc.list_daily("daily-heart-rate-variability")
+        except Exception as e:  # noqa: BLE001
+            typer.echo(f"HRV fetch skipped: {e}", err=True)
+            hrv_points = []
 
     typer.echo(f"Fetched {len(raw_points)} sleep dataPoints.")
     rows = [sleep_mod.parse_session(p, user_id=user_id) for p in raw_points]
@@ -46,6 +56,22 @@ def sync(
         typer.echo(f"Upserted {ns} step days.")
     else:
         typer.echo("No steps data returned from API.")
+
+    if rhr_points:
+        typer.echo(f"Fetched {len(rhr_points)} RHR dataPoints.")
+        rhr_rows = [r for p in rhr_points if (r := heart.parse_rhr(p, user_id=user_id)) is not None]
+        nr = repository.upsert_rhr(settings.database_url, rhr_rows)
+        typer.echo(f"Upserted {nr} RHR days.")
+    else:
+        typer.echo("No RHR data returned from API.")
+
+    if hrv_points:
+        typer.echo(f"Fetched {len(hrv_points)} HRV dataPoints.")
+        hrv_rows = [r for p in hrv_points if (r := heart.parse_hrv(p, user_id=user_id)) is not None]
+        nh = repository.upsert_hrv(settings.database_url, hrv_rows)
+        typer.echo(f"Upserted {nh} HRV days.")
+    else:
+        typer.echo("No HRV data returned from API.")
 
 
 @app.command("db-migrate")
