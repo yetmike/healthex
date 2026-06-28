@@ -1,64 +1,64 @@
-"""Parse raw Google Health API steps dataPoints into row dicts ready for upsert."""
+"""Parse and aggregate Google Health API steps dataPoints into daily rows."""
 
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime, timedelta
 from typing import Any
 
 
-def parse_day(point: dict[str, Any], user_id: str | None = None) -> dict[str, Any]:
+def aggregate_days(points: list[dict[str, Any]], user_id: str = "me") -> list[dict[str, Any]]:
     """
-    Map a single steps dataPoint from the Google Health API v4 into a dict
-    matching the daily_steps table columns.
+    Aggregate raw steps dataPoints (one per short interval) into one row per civil date.
 
-    Expected API shape (mirrors sleep — needs confirmation against real response):
-      point.name            = "users/<uid>/dataTypes/steps/dataPoints/<id>"
-      point.dataSource.platform = "FITBIT"
-      point.steps.interval.startTime  (UTC ISO-8601, midnight of the day)
-      point.steps.interval.startUtcOffset  e.g. "7200s"
-      point.steps.summary.steps  (string)
+    Real API shape (confirmed 2026-06-28):
+      point.steps.count                          string, e.g. "25"
+      point.steps.interval.civilStartTime.date   {year, month, day}
+      point.dataSource.platform                  "HEALTH_KIT"
+
+    The API returns many sub-minute intervals per day; we SUM steps per civil date.
     """
-    name: str = point.get("name", "")
-    if user_id is None:
-        parts = name.split("/")
-        user_id = parts[1] if len(parts) > 1 else "me"
+    daily: dict[str, dict[str, Any]] = {}
 
-    steps_data: dict[str, Any] = point.get("steps", {})
-    interval: dict[str, Any] = steps_data.get("interval", {})
+    for point in points:
+        steps_data: dict[str, Any] = point.get("steps", {})
+        raw_count = steps_data.get("count")
+        count = int(raw_count) if raw_count is not None else 0
 
-    start_time: str = interval.get("startTime", "")
-    utc_offset_str: str = interval.get("startUtcOffset", "0s")
-    civil_date = _civil_date(start_time, utc_offset_str)
+        civil_date = _civil_date(steps_data)
+        if civil_date is None:
+            continue
 
-    summary: dict[str, Any] = steps_data.get("summary", {})
-    raw_steps = summary.get("steps")
-    steps = int(raw_steps) if raw_steps is not None else 0
+        source_platform: str | None = None
+        ds: Any = point.get("dataSource", {})
+        if isinstance(ds, dict):
+            source_platform = ds.get("platform") or ds.get("recordingMethod")
 
-    source_platform: str | None = None
-    ds: Any = point.get("dataSource", {})
-    if isinstance(ds, dict):
-        source_platform = ds.get("platform") or ds.get("recordingMethod")
+        if civil_date not in daily:
+            daily[civil_date] = {
+                "steps": 0,
+                "source_platform": source_platform,
+                "raw_sample": point,
+            }
+        daily[civil_date]["steps"] += count
 
-    row_id = hashlib.sha256(f"{user_id}|{civil_date}".encode()).hexdigest()[:32]
+    rows = []
+    for civil_date, data in daily.items():
+        row_id = hashlib.sha256(f"{user_id}|{civil_date}".encode()).hexdigest()[:32]
+        rows.append({
+            "id": row_id,
+            "user_id": user_id,
+            "step_date": civil_date,
+            "steps": data["steps"],
+            "source_platform": data["source_platform"],
+            "raw": data["raw_sample"],
+        })
 
-    return {
-        "id": row_id,
-        "user_id": user_id,
-        "step_date": civil_date,
-        "steps": steps,
-        "source_platform": source_platform,
-        "raw": point,
-    }
+    return rows
 
 
-def _civil_date(start_time_utc: str, utc_offset_str: str) -> str | None:
-    if not start_time_utc:
-        return None
+def _civil_date(steps_data: dict[str, Any]) -> str | None:
     try:
-        dt = datetime.fromisoformat(start_time_utc.replace("Z", "+00:00"))
-        offset_seconds = int(utc_offset_str.rstrip("s"))
-        local_dt = dt + timedelta(seconds=offset_seconds)
-        return local_dt.date().isoformat()
-    except (ValueError, AttributeError):
+        d = steps_data["interval"]["civilStartTime"]["date"]
+        return f"{d['year']:04d}-{d['month']:02d}-{d['day']:02d}"
+    except (KeyError, TypeError):
         return None

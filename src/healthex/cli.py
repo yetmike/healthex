@@ -41,7 +41,7 @@ def sync(
 
     if step_points:
         typer.echo(f"Fetched {len(step_points)} steps dataPoints.")
-        step_rows = [steps_mod.parse_day(p, user_id=user_id) for p in step_points]
+        step_rows = steps_mod.aggregate_days(step_points, user_id=user_id)
         ns = repository.upsert_steps(settings.database_url, step_rows)
         typer.echo(f"Upserted {ns} step days.")
     else:

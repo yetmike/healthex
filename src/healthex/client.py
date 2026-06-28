@@ -16,7 +16,7 @@ class HealthClient:
     def list_steps(self, since_iso: str) -> list[dict[str, object]]:
         """Return all steps dataPoints on or after *since_iso* (UTC ISO-8601)."""
         points: list[dict[str, object]] = []
-        params: dict[str, str] = {"pageSize": "50"}
+        params: dict[str, str] = {"pageSize": "1000"}
         while True:
             r = self._c.get("/users/me/dataTypes/steps/dataPoints", params=params)
             r.raise_for_status()
