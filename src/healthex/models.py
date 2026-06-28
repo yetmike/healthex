@@ -30,7 +30,7 @@ class SleepSession(Base):
     efficiency: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
     sleep_score: Mapped[int | None]  # nullable/derived; may not be in API response
     source_platform: Mapped[str | None] = mapped_column(Text)
-    raw: Mapped[dict] = mapped_column(JSONB, nullable=False)  # type: ignore[type-arg]
+    raw: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
     ingested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default="now()")
 
     __table_args__ = (
@@ -47,7 +47,7 @@ class DailySteps(Base):
     step_date: Mapped[date] = mapped_column(nullable=False)
     steps: Mapped[int] = mapped_column(nullable=False)
     source_platform: Mapped[str | None] = mapped_column(Text)
-    raw: Mapped[dict] = mapped_column(JSONB, nullable=False)  # type: ignore[type-arg]
+    raw: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
     ingested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default="now()")
 
     __table_args__ = (
@@ -65,7 +65,7 @@ class DailyRhr(Base):
     bpm: Mapped[int] = mapped_column(nullable=False)
     calculation_method: Mapped[str | None] = mapped_column(Text)
     source_platform: Mapped[str | None] = mapped_column(Text)
-    raw: Mapped[dict] = mapped_column(JSONB, nullable=False)  # type: ignore[type-arg]
+    raw: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
     ingested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default="now()")
 
     __table_args__ = (
@@ -85,7 +85,7 @@ class DailyHrv(Base):
     entropy: Mapped[Decimal | None] = mapped_column(Numeric(8, 4))
     deep_sleep_rmssd_ms: Mapped[Decimal | None] = mapped_column(Numeric(8, 3))
     source_platform: Mapped[str | None] = mapped_column(Text)
-    raw: Mapped[dict] = mapped_column(JSONB, nullable=False)  # type: ignore[type-arg]
+    raw: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
     ingested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default="now()")
 
     __table_args__ = (

@@ -5,7 +5,7 @@ import pytest
 from healthex.sleep import parse_session
 
 # Mirrors the real Google Health API v4 response shape (confirmed 2026-06-28)
-SAMPLE_POINT: dict = {
+SAMPLE_POINT: dict[str, object] = {
     "name": "users/7426086979915171127/dataTypes/sleep/dataPoints/123",
     "dataSource": {"recordingMethod": "DERIVED", "device": {}, "platform": "FITBIT"},
     "sleep": {
@@ -64,7 +64,7 @@ def test_parse_session_id_is_stable() -> None:
 
 
 def test_parse_session_missing_fields_are_none() -> None:
-    minimal: dict = {
+    minimal: dict[str, object] = {
         "name": "users/123/dataTypes/sleep/dataPoints/456",
         "sleep": {
             "interval": {

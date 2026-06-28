@@ -6,11 +6,12 @@ when no DB is available, but they run in the main CI service (see ci.yml).
 """
 
 import pytest
+from sqlalchemy import Engine
 
 from healthex.repository import upsert_sleep
 from healthex.sleep import parse_session
 
-SAMPLE_POINT: dict = {
+SAMPLE_POINT: dict[str, object] = {
     "interval": {
         "startTime": "2026-06-27T23:00:00+02:00",
         "endTime": "2026-06-28T07:00:00+02:00",
@@ -22,7 +23,7 @@ SAMPLE_POINT: dict = {
 
 
 @pytest.mark.usefixtures("clean_db")
-def test_upsert_inserts_row(db_engine) -> None:
+def test_upsert_inserts_row(db_engine: Engine) -> None:
     import os
 
     db_url = os.getenv(
@@ -34,7 +35,7 @@ def test_upsert_inserts_row(db_engine) -> None:
 
 
 @pytest.mark.usefixtures("clean_db")
-def test_upsert_is_idempotent(db_engine) -> None:
+def test_upsert_is_idempotent(db_engine: Engine) -> None:
     """Running the same upsert twice must not duplicate rows."""
     import os
 

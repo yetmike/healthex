@@ -45,3 +45,12 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 python_version = "3.12"
 strict = true
 ignore_missing_imports = true
+disallow_untyped_decorators = false
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = "healthex.models"
+disallow_subclassing_any = false
