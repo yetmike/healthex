@@ -30,6 +30,24 @@ class HealthClient:
                 return points
             params["pageToken"] = str(token)
 
+    def _paginate(self, path: str, since_key: tuple[str, ...]) -> list[dict[str, object]]:
+        """Generic paginator — yields all dataPoints where nested start >= since (unused for daily types)."""
+        points: list[dict[str, object]] = []
+        params: dict[str, str] = {"pageSize": "1000"}
+        while True:
+            r = self._c.get(path, params=params)
+            r.raise_for_status()
+            body = r.json()
+            points.extend(body.get("dataPoints", []))
+            token = body.get("nextPageToken")
+            if not token:
+                return points
+            params["pageToken"] = str(token)
+
+    def list_daily(self, data_type: str) -> list[dict[str, object]]:
+        """Fetch all dataPoints for a daily data type (RHR, HRV). No client-side date filter needed."""
+        return self._paginate(f"/users/me/dataTypes/{data_type}/dataPoints", ())
+
     def list_sleep(self, since_iso: str) -> list[dict[str, object]]:
         """
         Return all sleep dataPoints on or after *since_iso* (UTC ISO-8601).

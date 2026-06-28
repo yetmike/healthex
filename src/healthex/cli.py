@@ -74,15 +74,11 @@ def sync(
         typer.echo("No HRV data returned from API.")
 
 
-@app.command("db-migrate")
-def db_migrate() -> None:
-    """Run Alembic migrations against DATABASE_URL (shortcut for `alembic upgrade head`)."""
-    import subprocess  # noqa: PLC0415
-    import sys  # noqa: PLC0415
+@app.command("db-init")
+def db_init() -> None:
+    """Create all tables in DATABASE_URL (idempotent, safe to re-run)."""
+    from healthex.db import make_engine  # noqa: PLC0415
+    from healthex.models import Base  # noqa: PLC0415
 
-    result = subprocess.run(
-        ["alembic", "upgrade", "head"],
-        check=False,
-        capture_output=False,
-    )
-    sys.exit(result.returncode)
+    Base.metadata.create_all(make_engine(settings.database_url))
+    typer.echo("Database tables created.")

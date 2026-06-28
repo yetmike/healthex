@@ -12,7 +12,6 @@ dependencies = [
     "google-auth-oauthlib>=1.2",
     "sqlalchemy>=2.0",
     "psycopg[binary]>=3.2",
-    "alembic>=1.13",
     "pydantic-settings>=2.3",
 ]
 
