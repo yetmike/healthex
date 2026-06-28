@@ -36,8 +36,9 @@ docker compose up -d
 
 **Homelab (persistent — for real data + Grafana visualization):**
 ```
-DATABASE_URL=postgresql+psycopg://healthex:<pw>@<traefik-lb-ip>:5432/healthex
+DATABASE_URL=postgresql+psycopg://healthex:<pw>@pg.yetmike.com:5432/healthex
 ```
+`pg.yetmike.com` resolves to the Traefik LoadBalancer IP via external-dns/pihole.
 See the homelab repo for deployment instructions.
 
 ### Schema migration
