@@ -71,7 +71,11 @@ def upsert_rhr(database_url: str, rows: list[dict[str, Any]]) -> int:
             .values(rows)
             .on_conflict_do_update(
                 constraint="uq_rhr_user_date",
-                set_={"bpm": insert(DailyRhr).excluded.bpm, "raw": insert(DailyRhr).excluded.raw, "ingested_at": text("now()")},
+                set_={
+                    "bpm": insert(DailyRhr).excluded.bpm,
+                    "raw": insert(DailyRhr).excluded.raw,
+                    "ingested_at": text("now()"),
+                },
             )
         )
         return len(session.execute(stmt.returning(DailyRhr.id)).fetchall())

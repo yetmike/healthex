@@ -37,9 +37,7 @@ def test_list_sleep_paginates() -> None:
             json={"dataPoints": [{"sleep": {"interval": {"startTime": "2026-06-27T23:00:00Z"}}}]},
         ),
     ]
-    route = respx.get(f"{BASE}/users/me/dataTypes/sleep/dataPoints").mock(
-        side_effect=responses
-    )
+    route = respx.get(f"{BASE}/users/me/dataTypes/sleep/dataPoints").mock(side_effect=responses)
     with HealthClient("fake-token") as hc:
         points = hc.list_sleep("2026-06-01T00:00:00")
     assert len(points) == 2
