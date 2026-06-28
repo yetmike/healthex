@@ -4,7 +4,10 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 
-SCOPES = ["https://www.googleapis.com/auth/googlehealth.sleep.readonly"]
+SCOPES = [
+    "https://www.googleapis.com/auth/googlehealth.sleep.readonly",
+    "https://www.googleapis.com/auth/googlehealth.readonly",
+]
 
 
 def get_credentials(client_secret_file: Path, token_file: Path) -> Credentials:

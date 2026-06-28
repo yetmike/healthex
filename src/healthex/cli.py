@@ -28,20 +28,24 @@ def sync(
     creds = auth.get_credentials(settings.google_client_secret_file, settings.healthex_token_file)
     with client.HealthClient(str(creds.token)) as hc:
         raw_points = hc.list_sleep(since)
+        try:
+            step_points = hc.list_steps(since)
+        except Exception as e:  # noqa: BLE001
+            typer.echo(f"Steps fetch skipped: {e}", err=True)
+            step_points = []
 
     typer.echo(f"Fetched {len(raw_points)} sleep dataPoints.")
     rows = [sleep_mod.parse_session(p, user_id=user_id) for p in raw_points]
     n = repository.upsert_sleep(settings.database_url, rows)
     typer.echo(f"Upserted {n} sleep sessions.")
 
-    try:
-        step_points = hc.list_steps(since)
+    if step_points:
         typer.echo(f"Fetched {len(step_points)} steps dataPoints.")
         step_rows = [steps_mod.parse_day(p, user_id=user_id) for p in step_points]
         ns = repository.upsert_steps(settings.database_url, step_rows)
         typer.echo(f"Upserted {ns} step days.")
-    except Exception as e:  # noqa: BLE001
-        typer.echo(f"Steps sync skipped: {e}", err=True)
+    else:
+        typer.echo("No steps data returned from API.")
 
 
 @app.command("db-migrate")
