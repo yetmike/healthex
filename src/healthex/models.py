@@ -44,13 +44,13 @@ class DailySteps(Base):
 
     id: Mapped[str] = mapped_column(Text, primary_key=True)
     user_id: Mapped[str] = mapped_column(Text, nullable=False)
-    date: Mapped[date] = mapped_column(nullable=False)
+    step_date: Mapped[date] = mapped_column(nullable=False)
     steps: Mapped[int] = mapped_column(nullable=False)
     source_platform: Mapped[str | None] = mapped_column(Text)
     raw: Mapped[dict] = mapped_column(JSONB, nullable=False)  # type: ignore[type-arg]
     ingested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default="now()")
 
     __table_args__ = (
-        UniqueConstraint("user_id", "date", name="uq_steps_user_date"),
-        Index("idx_steps_user_date", "user_id", "date"),
+        UniqueConstraint("user_id", "step_date", name="uq_steps_user_date"),
+        Index("idx_steps_user_date", "user_id", "step_date"),
     )

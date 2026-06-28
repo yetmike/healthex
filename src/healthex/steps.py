@@ -45,7 +45,7 @@ def parse_day(point: dict[str, Any], user_id: str | None = None) -> dict[str, An
     return {
         "id": row_id,
         "user_id": user_id,
-        "date": civil_date,
+        "step_date": civil_date,
         "steps": steps,
         "source_platform": source_platform,
         "raw": point,

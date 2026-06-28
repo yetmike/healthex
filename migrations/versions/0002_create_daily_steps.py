@@ -22,7 +22,7 @@ def upgrade() -> None:
         "daily_steps",
         sa.Column("id", sa.Text, primary_key=True),
         sa.Column("user_id", sa.Text, nullable=False),
-        sa.Column("date", sa.Date, nullable=False),
+        sa.Column("step_date", sa.Date, nullable=False),
         sa.Column("steps", sa.Integer, nullable=False),
         sa.Column("source_platform", sa.Text, nullable=True),
         sa.Column("raw", JSONB, nullable=False),
@@ -32,9 +32,9 @@ def upgrade() -> None:
             nullable=False,
             server_default=sa.text("now()"),
         ),
-        sa.UniqueConstraint("user_id", "date", name="uq_steps_user_date"),
+        sa.UniqueConstraint("user_id", "step_date", name="uq_steps_user_date"),
     )
-    op.create_index("idx_steps_user_date", "daily_steps", ["user_id", "date"])
+    op.create_index("idx_steps_user_date", "daily_steps", ["user_id", "step_date"])
 
 
 def downgrade() -> None:
