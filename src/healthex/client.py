@@ -13,6 +13,23 @@ class HealthClient:
             timeout=30.0,
         )
 
+    def list_steps(self, since_iso: str) -> list[dict[str, object]]:
+        """Return all steps dataPoints on or after *since_iso* (UTC ISO-8601)."""
+        points: list[dict[str, object]] = []
+        params: dict[str, str] = {"pageSize": "50"}
+        while True:
+            r = self._c.get("/users/me/dataTypes/steps/dataPoints", params=params)
+            r.raise_for_status()
+            body = r.json()
+            for p in body.get("dataPoints", []):
+                start = str(p.get("steps", {}).get("interval", {}).get("startTime", ""))
+                if start >= since_iso:
+                    points.append(p)
+            token = body.get("nextPageToken")
+            if not token:
+                return points
+            params["pageToken"] = str(token)
+
     def list_sleep(self, since_iso: str) -> list[dict[str, object]]:
         """
         Return all sleep dataPoints on or after *since_iso* (UTC ISO-8601).

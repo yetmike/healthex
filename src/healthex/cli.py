@@ -4,6 +4,7 @@ import typer
 
 from healthex import auth, client, repository
 from healthex import sleep as sleep_mod
+from healthex import steps as steps_mod
 from healthex.config import settings
 
 app = typer.Typer(help="Export Google Health sleep data to PostgreSQL.")
@@ -32,6 +33,15 @@ def sync(
     rows = [sleep_mod.parse_session(p, user_id=user_id) for p in raw_points]
     n = repository.upsert_sleep(settings.database_url, rows)
     typer.echo(f"Upserted {n} sleep sessions.")
+
+    try:
+        step_points = hc.list_steps(since)
+        typer.echo(f"Fetched {len(step_points)} steps dataPoints.")
+        step_rows = [steps_mod.parse_day(p, user_id=user_id) for p in step_points]
+        ns = repository.upsert_steps(settings.database_url, step_rows)
+        typer.echo(f"Upserted {ns} step days.")
+    except Exception as e:  # noqa: BLE001
+        typer.echo(f"Steps sync skipped: {e}", err=True)
 
 
 @app.command("db-migrate")

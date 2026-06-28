@@ -8,7 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert
 
 from healthex.db import get_session
-from healthex.models import SleepSession
+from healthex.models import DailySteps, SleepSession
 
 
 def upsert_sleep(database_url: str, rows: list[dict[str, Any]]) -> int:
@@ -38,4 +38,25 @@ def upsert_sleep(database_url: str, rows: list[dict[str, Any]]) -> int:
             )
         )
         result = session.execute(stmt.returning(SleepSession.id))
+        return len(result.fetchall())
+
+
+def upsert_steps(database_url: str, rows: list[dict[str, Any]]) -> int:
+    """Upsert *rows* into daily_steps. Conflict target is (user_id, date)."""
+    if not rows:
+        return 0
+    with get_session(database_url) as session:
+        stmt = (
+            insert(DailySteps)
+            .values(rows)
+            .on_conflict_do_update(
+                constraint="uq_steps_user_date",
+                set_={
+                    "steps": insert(DailySteps).excluded.steps,
+                    "raw": insert(DailySteps).excluded.raw,
+                    "ingested_at": text("now()"),
+                },
+            )
+        )
+        result = session.execute(stmt.returning(DailySteps.id))
         return len(result.fetchall())
