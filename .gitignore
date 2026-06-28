@@ -1,0 +1,12 @@
+client_secret.json
+token.json
+.env
+.venv/
+__pycache__/
+*.egg-info/
+*.pyc
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
