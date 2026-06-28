@@ -50,7 +50,15 @@ def parse_session(point: dict[str, Any], user_id: str | None = None) -> dict[str
     summary: dict[str, Any] = sleep.get("summary", {})
     minutes_asleep = _int(summary.get("minutesAsleep"))
     minutes_awake = _int(summary.get("minutesAwake"))
-    duration_seconds = _int(summary.get("minutesInSleepPeriod"), scale=60)
+    minutes_in_period = _int(summary.get("minutesInSleepPeriod"))
+    duration_seconds = minutes_in_period * 60 if minutes_in_period is not None else None
+
+    # Derive efficiency = asleep / in_period * 100 (API doesn't provide it)
+    efficiency = (
+        round(minutes_asleep / minutes_in_period * 100, 2)
+        if minutes_asleep is not None and minutes_in_period and minutes_in_period > 0
+        else None
+    )
 
     # stages: [{type, minutes, count}, ...]
     stages_map: dict[str, int] = {}
@@ -78,8 +86,8 @@ def parse_session(point: dict[str, Any], user_id: str | None = None) -> dict[str
         "minutes_light": minutes_light,
         "minutes_deep": minutes_deep,
         "minutes_rem": minutes_rem,
-        "efficiency": None,   # not in API
-        "sleep_score": None,  # not in API
+        "efficiency": efficiency,  # derived: minutes_asleep / minutes_in_period * 100
+        "sleep_score": None,       # not in API
         "source_platform": source_platform,
         "raw": point,
     }
