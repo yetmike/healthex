@@ -15,10 +15,10 @@ def get_credentials(client_secret_file: Path, token_file: Path) -> Credentials:
     """Return valid credentials, refreshing or re-authorising as needed."""
     creds: Credentials | None = None
     if token_file.exists():
-        creds = Credentials.from_authorized_user_file(str(token_file), SCOPES)
+        creds = Credentials.from_authorized_user_file(str(token_file), SCOPES)  # type: ignore[no-untyped-call]
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
+            creds.refresh(Request())  # type: ignore[no-untyped-call]
         else:
             flow = InstalledAppFlow.from_client_secrets_file(str(client_secret_file), SCOPES)
             creds = flow.run_local_server(port=0)  # loopback redirect; opens browser

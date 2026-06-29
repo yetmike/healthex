@@ -46,6 +46,7 @@ python_version = "3.12"
 strict = true
 ignore_missing_imports = true
 disallow_untyped_decorators = false
+warn_unused_ignores = false
 
 [[tool.mypy.overrides]]
 module = "tests.*"
