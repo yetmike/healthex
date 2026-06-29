@@ -1,0 +1,21 @@
+.git
+.venv
+.mypy_cache
+.pytest_cache
+.coverage
+htmlcov
+dist
+__pycache__
+*.pyc
+*.egg-info
+
+# credentials — must never be baked into the image
+client_secret.json
+token.json
+.env
+
+# dev-only files
+tests
+docker-compose.yml
+healthex-mvp-plan.md
+.pre-commit-config.yaml

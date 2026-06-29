@@ -1,5 +1,7 @@
 """Typer CLI — healthex commands."""
 
+import datetime as dt
+
 import typer
 
 from healthex import auth, client, heart, repository
@@ -21,10 +23,21 @@ def auth_login() -> None:
 
 @app.command("sync")
 def sync(
-    since: str = typer.Option(..., help='ISO-8601 local start time, e.g. "2026-06-01T00:00:00"'),
+    since: str | None = typer.Option(
+        None, help='ISO-8601 local start time, e.g. "2026-06-01T00:00:00"'
+    ),  # noqa: E501
+    days: int | None = typer.Option(
+        None, help="Sync the last N days (computes --since automatically)."
+    ),  # noqa: E501
     user_id: str = typer.Option("me", help="User identifier stored in the DB (default: me)."),
 ) -> None:
     """Fetch sleep, steps, RHR and HRV from Google Health and upsert into PostgreSQL."""
+    if since is not None and days is not None:
+        raise typer.BadParameter("Pass either --since or --days, not both.")
+    if days is not None:
+        since = (dt.datetime.now() - dt.timedelta(days=days)).strftime("%Y-%m-%dT00:00:00")
+    if since is None:
+        raise typer.BadParameter("Provide --since or --days.")
     creds = auth.get_credentials(settings.google_client_secret_file, settings.healthex_token_file)
     with client.HealthClient(str(creds.token)) as hc:
         raw_points = hc.list_sleep(since)

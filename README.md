@@ -63,6 +63,33 @@ uv run healthex sync --since "2024-01-01T00:00:00"
 | `healthex db-init` | Create tables (idempotent) |
 | `healthex sync --since ISO_DATE` | Fetch and upsert all data types |
 
+## Container / scheduled sync
+
+A pre-built image is published to `ghcr.io/yetmike/healthex` for every release.
+
+```bash
+docker run --rm \
+  -e DATABASE_URL="postgresql+psycopg://healthex:pw@host:5432/healthex" \
+  -e GOOGLE_CLIENT_SECRET_FILE=/creds/client_secret.json \
+  -e HEALTHEX_TOKEN_FILE=/data/token.json \
+  -v /path/to/client_secret.json:/creds/client_secret.json:ro \
+  -v /path/to/token.json:/data/token.json \
+  ghcr.io/yetmike/healthex:0.1.0 \
+  healthex sync --days 3
+```
+
+Required env vars:
+
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | PostgreSQL DSN (`postgresql+psycopg://...`) |
+| `GOOGLE_CLIENT_SECRET_FILE` | Path to `client_secret.json` inside the container |
+| `HEALTHEX_TOKEN_FILE` | Path to a **writable** `token.json` — the CLI rewrites it on every token refresh |
+
+> **Note:** `token.json` must be on writable storage. With restricted OAuth scopes in *Testing* mode,
+> refresh tokens expire roughly weekly. Re-run `healthex auth login` locally and supply the updated
+> `token.json` when that happens.
+
 ## Local database (for development)
 
 ```bash

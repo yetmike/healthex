@@ -10,3 +10,6 @@ __pycache__/
 .coverage
 htmlcov/
 dist/
+# internal planning docs
+healthex-mvp-plan.md
+.claude/
