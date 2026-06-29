@@ -12,13 +12,26 @@ from healthex.repository import upsert_sleep
 from healthex.sleep import parse_session
 
 SAMPLE_POINT: dict[str, object] = {
-    "interval": {
-        "startTime": "2026-06-27T23:00:00+02:00",
-        "endTime": "2026-06-28T07:00:00+02:00",
+    "name": "users/test/dataTypes/sleep/dataPoints/abc123",
+    "sleep": {
+        "interval": {
+            "startTime": "2026-06-27T21:00:00Z",
+            "endTime": "2026-06-28T05:00:00Z",
+            "startUtcOffset": "7200s",
+        },
+        "type": "STAGES",
+        "summary": {
+            "minutesAsleep": "440",
+            "minutesAwake": "40",
+            "minutesInSleepPeriod": "480",
+            "stagesSummary": [
+                {"type": "LIGHT", "minutes": "200", "count": "5"},
+                {"type": "DEEP", "minutes": "100", "count": "3"},
+                {"type": "REM", "minutes": "140", "count": "4"},
+                {"type": "AWAKE", "minutes": "40", "count": "6"},
+            ],
+        },
     },
-    "civil_date": "2026-06-27",
-    "sleepType": "stages",
-    "summary": {"minutesAsleep": 440, "minutesAwake": 40, "efficiency": 91.5},
 }
 
 
