@@ -61,10 +61,13 @@ disallow_subclassing_any = false
 # image tag are both derived from it.
 version_toml = ["pyproject.toml:project.version"]
 commit_message = "chore(release): v{version}"
-# Re-lock after the version bump: uv.lock records healthex's own version, so
-# without this it drifts from pyproject.toml on every release.
-build_command = "uv lock"
-assets = ["uv.lock"]
+# No build step: we ship a container image, not a wheel.
+#
+# Note uv.lock records healthex's own version, so it lags pyproject.toml by one
+# release. `uv sync --frozen` tolerates that (verified), so it is cosmetic.
+# Re-locking here is not possible: this action runs in its own container and
+# has no uv on PATH.
+build_command = ""
 tag_format = "v{version}"
 
 # Stay on 0.x until 1.0.0 is a deliberate decision: without these, a plain
