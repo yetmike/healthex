@@ -26,3 +26,6 @@ jobs:
       - run: uv run mypy src
       - run: uv run healthex db-init
       - run: uv run pytest --cov=healthex --cov-report=term-missing
+      # build the image too: dep/base-image bumps must not break the shipped artifact
+      - run: docker build -t healthex:ci .
+      - run: docker run --rm healthex:ci healthex --help
