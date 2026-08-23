@@ -17,6 +17,8 @@ jobs:
           fetch-depth: 0 # semantic-release needs full history to read tags
           token: ${{ secrets.RELEASE_TOKEN }}
 
+      - uses: astral-sh/setup-uv@v3 # build_command runs `uv lock`
+
       # Reads conventional commits since the last tag, bumps the version in
       # pyproject.toml (the single source of truth), writes CHANGELOG.md,
       # commits, tags vX.Y.Z and publishes the GitHub release.
