@@ -2,16 +2,36 @@ name: dependabot-automerge
 
 on: pull_request_target
 
+# Least privilege: this workflow never checks out PR code, it only flags the
+# PR for auto-merge. GitHub still enforces the required 'test' check.
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
   automerge:
-    if: github.actor == 'dependabot[bot]'
+    if: github.actor == 'dependabot[bot]' && github.event.pull_request.user.login == 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
-      - run: gh pr merge --auto --squash "$PR_URL"
+      # SHA-pinned: this job runs with write scope, so a moved tag must not
+      # be able to change what executes here.
+      - id: meta
+        uses: dependabot/fetch-metadata@21025c705c08248db411dc16f3619e6b5f9ea21a # v2
+        with:
+          alert-lookup: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Majors are held for a human: they carry breaking changes by definition
+      # and are the likeliest shape for a malicious or disruptive release.
+      - if: steps.meta.outputs.update-type == 'version-update:semver-major'
+        run: |
+          gh pr comment "$PR_URL" --body "Major version bump — held for manual review, auto-merge not applied."
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - if: steps.meta.outputs.update-type != 'version-update:semver-major'
+        run: gh pr merge --auto --squash "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

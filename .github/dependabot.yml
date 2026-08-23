@@ -4,16 +4,25 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Supply-chain guard: don't pull a release the day it lands. A compromised
+    # publish is usually yanked within days, and nothing here is urgent.
+    cooldown:
+      default-days: 5
     groups:
-      all:
+      # Grouped only for minor+patch, so the batch PR is always auto-mergeable.
+      # Majors land as their own PRs and are held for manual review — otherwise
+      # one major would block the whole week's patches from auto-merging.
+      minor-and-patch:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
     groups:
-      all:
+      minor-and-patch:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
   - package-ecosystem: docker
     directory: /
     schedule:

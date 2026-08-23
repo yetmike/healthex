@@ -1,6 +1,9 @@
 name: docker
 
 on:
+  # GITHUB_TOKEN merges (dependabot auto-merge) do not trigger push events,
+  # so edge/sha tags can lag main. Rebuild on demand.
+  workflow_dispatch:
   push:
     branches:
       - main
