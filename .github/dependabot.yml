@@ -4,6 +4,10 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Supply-chain guard: don't pull a release the day it lands. A compromised
+    # publish is usually yanked within days, and nothing here is urgent.
+    cooldown:
+      default-days: 5
     groups:
       all:
         patterns: ["*"]
