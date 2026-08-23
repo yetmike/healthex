@@ -17,11 +17,9 @@ jobs:
     steps:
       - uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4
         with:
-          # Manifest mode: .release-please-manifest.json pins the current
-          # version (0.1.0, matching the existing v0.1.0 tag) so the first
-          # run continues the series instead of restarting it.
-          config-file: release-please-config.json
-          manifest-file: .release-please-manifest.json
+          # Simple mode: no config files. The current version is read from the
+          # v0.1.0 GitHub release, and the version bump lands in pyproject.toml.
+          release-type: python
           # A PAT, not GITHUB_TOKEN: token-created events do not trigger other
           # workflows, so with GITHUB_TOKEN the release PR would never get its
           # required 'test' check and the tag would never start a docker build.
