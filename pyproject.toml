@@ -55,3 +55,19 @@ disallow_untyped_defs = false
 [[tool.mypy.overrides]]
 module = "healthex.models"
 disallow_subclassing_any = false
+
+[tool.semantic_release]
+# pyproject.toml is the ONLY place the version is stored; the git tag and the
+# image tag are both derived from it.
+version_toml = ["pyproject.toml:project.version"]
+commit_message = "chore(release): v{version}"
+build_command = ""            # we ship a container image, not a wheel
+tag_format = "v{version}"
+
+# Stay on 0.x until 1.0.0 is a deliberate decision: without these, a plain
+# fix: on 0.1.0 resolves to 1.0.0 rather than 0.1.1.
+allow_zero_version = true
+major_on_zero = false
+
+[tool.semantic_release.branches.main]
+match = "main"
