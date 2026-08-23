@@ -2,12 +2,19 @@
 
 from collections.abc import Iterator
 from contextlib import contextmanager
+from functools import cache
 
-from sqlalchemy import create_engine
+from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 
-def make_engine(database_url: str):  # type: ignore[no-untyped-def]
+@cache
+def make_engine(database_url: str) -> Engine:
+    """One engine (and one connection pool) per database URL.
+
+    Each Engine owns a pool, so building a new one per call meant every upsert
+    opened its own connections and never disposed them.
+    """
     return create_engine(database_url, pool_pre_ping=True)
 
 
