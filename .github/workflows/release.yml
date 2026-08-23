@@ -23,6 +23,6 @@ jobs:
       #
       # RELEASE_TOKEN rather than GITHUB_TOKEN: token-created tags do not
       # trigger other workflows, so docker.yml would never build the image.
-      - uses: python-semantic-release/python-semantic-release@21ed7fa03e4a17ac49406eff4b60d5ad050fbdc2 # v9
+      - uses: python-semantic-release/python-semantic-release@39dd2052f2ce8282a5d932c31d58a2ca06d2550e # v10.6.1
         with:
           github_token: ${{ secrets.RELEASE_TOKEN }}
