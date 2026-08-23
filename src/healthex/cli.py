@@ -89,9 +89,12 @@ def sync(
 
 @app.command("db-init")
 def db_init() -> None:
-    """Create all tables in DATABASE_URL (idempotent, safe to re-run)."""
-    from healthex.db import make_engine  # noqa: PLC0415
-    from healthex.models import Base  # noqa: PLC0415
+    """Apply pending schema migrations to DATABASE_URL (idempotent)."""
+    from healthex import migrate  # noqa: PLC0415
 
-    Base.metadata.create_all(make_engine(settings.database_url))
-    typer.echo("Database tables created.")
+    applied = migrate.apply(settings.database_url)
+    if applied:
+        for name in applied:
+            typer.echo(f"Applied {name}")
+    else:
+        typer.echo("Schema already up to date.")

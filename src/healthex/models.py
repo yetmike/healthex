@@ -3,7 +3,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import DateTime, Index, Numeric, Text, UniqueConstraint
+from sqlalchemy import DateTime, Index, Numeric, Text, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -31,7 +31,9 @@ class SleepSession(Base):
     sleep_score: Mapped[int | None]  # nullable/derived; may not be in API response
     source_platform: Mapped[str | None] = mapped_column(Text)
     raw: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
-    ingested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default="now()")
+    ingested_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
 
     __table_args__ = (
         UniqueConstraint("user_id", "start_time", name="uq_sleep_user_start"),
@@ -48,7 +50,9 @@ class DailySteps(Base):
     steps: Mapped[int] = mapped_column(nullable=False)
     source_platform: Mapped[str | None] = mapped_column(Text)
     raw: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
-    ingested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default="now()")
+    ingested_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
 
     __table_args__ = (
         UniqueConstraint("user_id", "step_date", name="uq_steps_user_date"),
@@ -66,7 +70,9 @@ class DailyRhr(Base):
     calculation_method: Mapped[str | None] = mapped_column(Text)
     source_platform: Mapped[str | None] = mapped_column(Text)
     raw: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
-    ingested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default="now()")
+    ingested_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
 
     __table_args__ = (
         UniqueConstraint("user_id", "rhr_date", name="uq_rhr_user_date"),
@@ -86,7 +92,9 @@ class DailyHrv(Base):
     deep_sleep_rmssd_ms: Mapped[Decimal | None] = mapped_column(Numeric(8, 3))
     source_platform: Mapped[str | None] = mapped_column(Text)
     raw: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
-    ingested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default="now()")
+    ingested_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
 
     __table_args__ = (
         UniqueConstraint("user_id", "hrv_date", name="uq_hrv_user_date"),
