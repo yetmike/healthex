@@ -18,8 +18,8 @@ jobs:
     env:
       DATABASE_URL: postgresql+psycopg://healthex:healthex@localhost:5432/healthex
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v3
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
       - run: uv sync --all-extras --dev
       - run: uv run ruff check .
       - run: uv run ruff format --check .
