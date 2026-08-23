@@ -14,6 +14,11 @@ DATABASE_URL = os.getenv(
 
 
 @pytest.fixture(scope="session")
+def db_url() -> str:
+    return DATABASE_URL
+
+
+@pytest.fixture(scope="session")
 def db_engine() -> Generator[Engine, None, None]:
     engine = create_engine(DATABASE_URL, pool_pre_ping=True)
     Base.metadata.create_all(engine)
@@ -26,5 +31,5 @@ def db_engine() -> Generator[Engine, None, None]:
 def clean_db(db_engine: Engine) -> Generator[None, None, None]:
     yield
     with db_engine.connect() as conn:
-        conn.execute(text("TRUNCATE TABLE sleep_sessions"))
+        conn.execute(text("TRUNCATE TABLE sleep_sessions, daily_steps, daily_rhr, daily_hrv"))
         conn.commit()
