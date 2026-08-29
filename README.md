@@ -40,8 +40,7 @@ That installs the latest code on `main`. Update at any time with:
 uv tool upgrade healthex
 ```
 
-Remove it with `uv tool uninstall healthex`. To install a specific release instead, append the tag:
-`"git+https://github.com/yetmike/healthex@v0.3.0"`.
+Remove it with `uv tool uninstall healthex`.
 
 Requires Python 3.12+. For scheduled or containerised runs, use the published image instead — see
 [Container / scheduled sync](#container--scheduled-sync).
@@ -108,7 +107,7 @@ docker run --rm \
   -e HEALTHEX_TOKEN_FILE=/data/token.json \
   -v /path/to/client_secret.json:/creds/client_secret.json:ro \
   -v /path/to/token.json:/data/token.json \
-  ghcr.io/yetmike/healthex:0.1.0 \
+  ghcr.io/yetmike/healthex:0.3.0 \
   healthex sync --days 3
 ```
 
