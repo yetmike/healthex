@@ -8,7 +8,10 @@ class Settings(BaseSettings):
 
     google_client_secret_file: Path = Path("client_secret.json")
     healthex_token_file: Path = Path("token.json")
-    database_url: str = "postgresql+psycopg://healthex:healthex@localhost:5432/healthex"
+    # Deliberately no default. A plausible localhost URL fails silently: run
+    # the tool outside a directory holding .env and it would quietly write to
+    # whatever Postgres happened to be listening locally.
+    database_url: str | None = None
 
 
 settings = Settings()
