@@ -33,6 +33,7 @@ def upsert_sleep(database_url: str, rows: list[dict[str, Any]]) -> int:
                     "raw": insert(SleepSession).excluded.raw,
                     "sleep_score": insert(SleepSession).excluded.sleep_score,
                     "efficiency": insert(SleepSession).excluded.efficiency,
+                    "sleep_latency_minutes": insert(SleepSession).excluded.sleep_latency_minutes,
                     "ingested_at": text("now()"),
                 },
             )

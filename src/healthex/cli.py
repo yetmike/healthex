@@ -5,7 +5,7 @@ from collections.abc import Callable
 
 import typer
 
-from healthex import auth, client, heart, repository
+from healthex import auth, client, heart, migrate, repository
 from healthex import sleep as sleep_mod
 from healthex import steps as steps_mod
 from healthex.config import settings
@@ -54,6 +54,17 @@ def sync(
     if since is None:
         raise typer.BadParameter("Provide --since or --days.")
     db_url = _resolve_db_url(database_url)
+
+    # Apply any pending migrations first: a fresh database has no tables, and an
+    # upgraded healthex may add columns the upsert below writes to.
+    from healthex import migrate  # noqa: PLC0415
+
+    for name in migrate.apply(db_url):
+        typer.echo(f"Applied {name}")
+    # Bootstrap the schema so a fresh database needs no separate db-init.
+    # apply() only runs pending migrations, so this is a no-op on a current DB.
+    for name in migrate.apply(db_url):
+        typer.echo(f"Applied {name}")
     creds = auth.get_credentials(settings.google_client_secret_file, settings.healthex_token_file)
 
     failed: list[str] = []
@@ -121,8 +132,6 @@ def db_init(
     ),
 ) -> None:
     """Apply pending schema migrations to the target database (idempotent)."""
-    from healthex import migrate  # noqa: PLC0415
-
     applied = migrate.apply(_resolve_db_url(database_url))
     if applied:
         for name in applied:

@@ -62,6 +62,7 @@ def parse_session(point: dict[str, Any], user_id: str | None = None) -> dict[str
         minutes_awake = stages_map.get("AWAKE")
 
     # Derived metrics (not in API)
+    sleep_latency = _derive_sleep_latency(sleep)
     efficiency = _derive_efficiency(minutes_asleep, minutes_in_period)
     sleep_score = _derive_sleep_score(minutes_asleep, minutes_in_period, minutes_deep, minutes_rem)
 
@@ -79,10 +80,43 @@ def parse_session(point: dict[str, Any], user_id: str | None = None) -> dict[str
         "minutes_deep": minutes_deep,
         "minutes_rem": minutes_rem,
         "efficiency": efficiency,
+        "sleep_latency_minutes": sleep_latency,
         "sleep_score": sleep_score,
         "source_platform": source_platform,
         "raw": point,
     }
+
+
+def _derive_sleep_latency(sleep: dict[str, Any]) -> int | None:
+    """Minutes from the start of the session to the first non-AWAKE stage.
+
+    summary.minutesToFallAsleep exists but reports 0 on some devices (every
+    session on a Fitbit Charge, for one), so the stage timeline is the reliable
+    source. The API field is used only when stages are absent, as on CLASSIC
+    sessions, and only when it is non-zero.
+    """
+    start_time = sleep.get("interval", {}).get("startTime")
+    stages = sleep.get("stages") or []
+
+    asleep_at = min(
+        (
+            st["startTime"]
+            for st in stages
+            if str(st.get("type", "")).upper() != "AWAKE" and st.get("startTime")
+        ),
+        default=None,
+    )
+
+    if start_time and asleep_at:
+        try:
+            started = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
+            asleep = datetime.fromisoformat(asleep_at.replace("Z", "+00:00"))
+        except (ValueError, AttributeError):
+            return None
+        latency = round((asleep - started).total_seconds() / 60)
+        return latency if latency >= 0 else None
+
+    return _int(sleep.get("summary", {}).get("minutesToFallAsleep")) or None
 
 
 def _derive_efficiency(minutes_asleep: int | None, minutes_in_period: int | None) -> float | None:

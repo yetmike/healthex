@@ -112,3 +112,66 @@ def test_ingested_at_defaults_to_insert_time(two_databases: tuple[str, str]) -> 
             )
         ).one()
     assert abs((row.ingested_at - row.actual_now).total_seconds()) < 5
+
+
+def test_sync_bootstraps_an_empty_database(two_databases: tuple[str, str]) -> None:
+    """A fresh database needs no separate db-init: sync applies the schema itself."""
+    from unittest.mock import patch  # noqa: PLC0415
+
+    from typer.testing import CliRunner  # noqa: PLC0415
+
+    from healthex.cli import app  # noqa: PLC0415
+
+    fresh, _ = two_databases
+    with (
+        patch("healthex.cli.auth.get_credentials", side_effect=RuntimeError("stop here")),
+    ):
+        CliRunner().invoke(app, ["sync", "--days", "1", "--database-url", fresh])
+    assert "sleep_sessions" in inspect(make_engine(fresh)).get_table_names()
+    assert migrate.pending(fresh) == []
+
+
+def test_003_backfills_latency_from_stored_payload(two_databases: tuple[str, str]) -> None:
+    """History predates the column, so the backfill must recover it from raw."""
+    import json
+    import shutil
+    from pathlib import Path as P
+    from tempfile import mkdtemp
+
+    from healthex.migrate import MIGRATIONS_DIR
+
+    url, _ = two_databases
+
+    # Apply only the migrations that existed before the column.
+    partial = P(mkdtemp())
+    for name in ("001_init.sql", "002_fix_ingested_at_default.sql"):
+        shutil.copy(MIGRATIONS_DIR / name, partial / name)
+    migrate.apply(url, partial)
+
+    raw = {
+        "sleep": {
+            "interval": {"startTime": "2026-08-28T23:11:00Z"},
+            "stages": [
+                {"startTime": "2026-08-28T23:11:00Z", "type": "AWAKE"},
+                {"startTime": "2026-08-28T23:26:00Z", "type": "LIGHT"},
+            ],
+        }
+    }
+    engine = create_engine(url)
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                "INSERT INTO sleep_sessions (id,user_id,start_time,end_time,raw)"
+                " VALUES ('old','t','2026-08-28T23:11:00Z','2026-08-29T07:00:00Z',:raw)"
+            ),
+            {"raw": json.dumps(raw)},
+        )
+
+    applied = migrate.apply(url)  # now the full set, including 003
+    assert "003_sleep_latency.sql" in applied
+
+    with engine.connect() as conn:
+        latency = conn.execute(
+            text("SELECT sleep_latency_minutes FROM sleep_sessions WHERE id='old'")
+        ).scalar()
+    assert latency == 15  # 23:11 -> 23:26

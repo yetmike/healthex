@@ -42,6 +42,7 @@ def test_sync_days_accepted() -> None:
     """--days N should resolve to a --since value and run normally."""
     mock_creds, mock_hc = _mock_sync_deps()
     with (
+        patch("healthex.cli.migrate.apply", return_value=[]),
         patch("healthex.cli.auth.get_credentials", return_value=mock_creds),
         patch("healthex.cli.client.HealthClient", return_value=mock_hc),
         patch("healthex.cli.repository.upsert_sleep", return_value=0),
@@ -57,6 +58,7 @@ def test_sync_since_accepted() -> None:
     """--since should still work (backwards compat)."""
     mock_creds, mock_hc = _mock_sync_deps()
     with (
+        patch("healthex.cli.migrate.apply", return_value=[]),
         patch("healthex.cli.auth.get_credentials", return_value=mock_creds),
         patch("healthex.cli.client.HealthClient", return_value=mock_hc),
         patch("healthex.cli.repository.upsert_sleep", return_value=0),

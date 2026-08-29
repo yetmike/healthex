@@ -274,3 +274,41 @@ def test_total_outage_exits_non_zero(db_url: str, monkeypatch: pytest.MonkeyPatc
 
     assert result.exit_code == 1
     assert "sleep" in result.output
+
+
+@respx.mock
+def test_sync_creates_the_schema_on_a_fresh_database(
+    db_url: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """sync against an empty database must not fail on missing tables."""
+    from sqlalchemy import create_engine, text
+
+    from healthex.db import make_engine
+
+    admin = create_engine(db_url, isolation_level="AUTOCOMMIT")
+    with admin.connect() as conn:
+        conn.execute(text('DROP DATABASE IF EXISTS "sync_fresh"'))
+        conn.execute(text('CREATE DATABASE "sync_fresh"'))
+    fresh = db_url.rsplit("/", 1)[0] + "/sync_fresh"
+
+    monkeypatch.setattr(settings, "database_url", fresh)
+    _route_api(sleep=[SLEEP_POINT])
+
+    with patch("healthex.cli.auth.get_credentials", return_value=_fake_creds()):
+        result = runner.invoke(app, ["sync", "--since", "2026-06-01T00:00:00", "--user-id", "e2e"])
+
+    assert result.exit_code == 0, result.output
+    assert "Applied 001_init.sql" in result.output
+    assert "sleep=1" in result.output
+
+    make_engine(fresh).dispose()
+    make_engine.cache_clear()
+    with admin.connect() as conn:
+        conn.execute(
+            text(
+                "SELECT pg_terminate_backend(pid) FROM pg_stat_activity"
+                " WHERE datname = 'sync_fresh' AND pid <> pg_backend_pid()"
+            )
+        )
+        conn.execute(text('DROP DATABASE IF EXISTS "sync_fresh"'))
+    admin.dispose()

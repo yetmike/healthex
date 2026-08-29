@@ -78,3 +78,61 @@ def test_parse_session_missing_fields_are_none() -> None:
     assert row["efficiency"] is None
     assert row["sleep_score"] is None
     assert row["civil_date"] == "2026-06-26"
+
+
+STAGED_SESSION: dict[str, object] = {
+    "sleep": {
+        "interval": {"startTime": "2026-08-28T23:11:00Z", "startUtcOffset": "7200s"},
+        "type": "STAGES",
+        "summary": {"minutesToFallAsleep": "0", "minutesAsleep": "400"},
+        "stages": [
+            {"startTime": "2026-08-28T23:11:00Z", "type": "AWAKE"},
+            {"startTime": "2026-08-28T23:21:30Z", "type": "LIGHT"},
+            {"startTime": "2026-08-28T23:34:30Z", "type": "DEEP"},
+        ],
+    }
+}
+
+
+def test_latency_is_time_to_first_non_awake_stage() -> None:
+    """23:11:00 -> 23:21:30 is 10.5 minutes."""
+    row = parse_session(STAGED_SESSION, user_id="t")
+    assert row["sleep_latency_minutes"] == 10
+
+
+def test_latency_ignores_the_zero_api_field_when_stages_exist() -> None:
+    """summary.minutesToFallAsleep reports 0 on some devices; stages win."""
+    row = parse_session(STAGED_SESSION, user_id="t")
+    assert row["sleep_latency_minutes"] != 0
+
+
+def test_latency_falls_back_to_api_field_without_stages() -> None:
+    point: dict[str, object] = {
+        "sleep": {
+            "interval": {"startTime": "2026-08-28T23:11:00Z"},
+            "type": "CLASSIC",
+            "summary": {"minutesToFallAsleep": "14"},
+        }
+    }
+    assert parse_session(point, user_id="t")["sleep_latency_minutes"] == 14
+
+
+def test_latency_is_none_when_api_field_is_zero_and_no_stages() -> None:
+    point: dict[str, object] = {
+        "sleep": {
+            "interval": {"startTime": "2026-08-28T23:11:00Z"},
+            "summary": {"minutesToFallAsleep": "0"},
+        }
+    }
+    assert parse_session(point, user_id="t")["sleep_latency_minutes"] is None
+
+
+def test_latency_is_none_when_every_stage_is_awake() -> None:
+    point: dict[str, object] = {
+        "sleep": {
+            "interval": {"startTime": "2026-08-28T23:11:00Z"},
+            "summary": {},
+            "stages": [{"startTime": "2026-08-28T23:11:00Z", "type": "AWAKE"}],
+        }
+    }
+    assert parse_session(point, user_id="t")["sleep_latency_minutes"] is None

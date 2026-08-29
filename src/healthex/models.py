@@ -28,6 +28,7 @@ class SleepSession(Base):
     minutes_deep: Mapped[int | None]
     minutes_rem: Mapped[int | None]
     efficiency: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
+    sleep_latency_minutes: Mapped[int | None]  # derived; API field is 0 on some devices
     sleep_score: Mapped[int | None]  # nullable/derived; may not be in API response
     source_platform: Mapped[str | None] = mapped_column(Text)
     raw: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
