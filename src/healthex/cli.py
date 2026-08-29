@@ -1,6 +1,7 @@
 """Typer CLI — healthex commands."""
 
 import datetime as dt
+from collections.abc import Callable
 
 import typer
 
@@ -39,52 +40,63 @@ def sync(
     if since is None:
         raise typer.BadParameter("Provide --since or --days.")
     creds = auth.get_credentials(settings.google_client_secret_file, settings.healthex_token_file)
-    with client.HealthClient(str(creds.token)) as hc:
-        raw_points = hc.list_sleep(since)
-        try:
-            step_points = hc.list_steps(since)
-        except Exception as e:  # noqa: BLE001
-            typer.echo(f"Steps fetch skipped: {e}", err=True)
-            step_points = []
-        try:
-            rhr_points = hc.list_daily("daily-resting-heart-rate")
-        except Exception as e:  # noqa: BLE001
-            typer.echo(f"RHR fetch skipped: {e}", err=True)
-            rhr_points = []
-        try:
-            hrv_points = hc.list_daily("daily-heart-rate-variability")
-        except Exception as e:  # noqa: BLE001
-            typer.echo(f"HRV fetch skipped: {e}", err=True)
-            hrv_points = []
 
-    typer.echo(f"Fetched {len(raw_points)} sleep dataPoints.")
-    rows = [sleep_mod.parse_session(p, user_id=user_id) for p in raw_points]
-    n = repository.upsert_sleep(settings.database_url, rows)
-    typer.echo(f"Upserted {n} sleep sessions.")
+    failed: list[str] = []
+
+    def fetch(
+        label: str, call: Callable[[], list[dict[str, object]]]
+    ) -> list[dict[str, object]] | None:
+        """Return the dataPoints, or None if the fetch failed.
+
+        None and [] mean different things: a failure the scheduler must hear
+        about, versus a day the API genuinely had nothing for.
+        """
+        try:
+            return call()
+        except Exception as e:  # noqa: BLE001
+            typer.echo(f"{label} fetch FAILED: {e}", err=True)
+            failed.append(label)
+            return None
+
+    with client.HealthClient(str(creds.token)) as hc:
+        sleep_points = fetch("sleep", lambda: hc.list_sleep(since))
+        step_points = fetch("steps", lambda: hc.list_steps(since))
+        rhr_points = fetch("rhr", lambda: hc.list_daily("daily-resting-heart-rate"))
+        hrv_points = fetch("hrv", lambda: hc.list_daily("daily-heart-rate-variability"))
+
+    stored = dict.fromkeys(("sleep", "steps", "rhr", "hrv"), 0)
+
+    if sleep_points:
+        rows = [sleep_mod.parse_session(p, user_id=user_id) for p in sleep_points]
+        stored["sleep"] = repository.upsert_sleep(settings.database_url, rows)
+    elif sleep_points is not None:
+        typer.echo("No sleep data returned from API.")
 
     if step_points:
-        typer.echo(f"Fetched {len(step_points)} steps dataPoints.")
         step_rows = steps_mod.aggregate_days(step_points, user_id=user_id)
-        ns = repository.upsert_steps(settings.database_url, step_rows)
-        typer.echo(f"Upserted {ns} step days.")
-    else:
+        stored["steps"] = repository.upsert_steps(settings.database_url, step_rows)
+    elif step_points is not None:
         typer.echo("No steps data returned from API.")
 
     if rhr_points:
-        typer.echo(f"Fetched {len(rhr_points)} RHR dataPoints.")
         rhr_rows = [r for p in rhr_points if (r := heart.parse_rhr(p, user_id=user_id)) is not None]
-        nr = repository.upsert_rhr(settings.database_url, rhr_rows)
-        typer.echo(f"Upserted {nr} RHR days.")
-    else:
+        stored["rhr"] = repository.upsert_rhr(settings.database_url, rhr_rows)
+    elif rhr_points is not None:
         typer.echo("No RHR data returned from API.")
 
     if hrv_points:
-        typer.echo(f"Fetched {len(hrv_points)} HRV dataPoints.")
         hrv_rows = [r for p in hrv_points if (r := heart.parse_hrv(p, user_id=user_id)) is not None]
-        nh = repository.upsert_hrv(settings.database_url, hrv_rows)
-        typer.echo(f"Upserted {nh} HRV days.")
-    else:
+        stored["hrv"] = repository.upsert_hrv(settings.database_url, hrv_rows)
+    elif hrv_points is not None:
         typer.echo("No HRV data returned from API.")
+
+    counts = " ".join(f"{k}={v}" for k, v in stored.items())
+    status = "complete" if not failed else f"PARTIAL (failed: {', '.join(failed)})"
+    typer.echo(f"sync {status}: {counts}")
+
+    # Non-zero so a scheduler notices. Whatever succeeded is still committed.
+    if failed:
+        raise typer.Exit(1)
 
 
 @app.command("db-init")
