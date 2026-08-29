@@ -86,9 +86,23 @@ Required env vars:
 | `GOOGLE_CLIENT_SECRET_FILE` | Path to `client_secret.json` inside the container |
 | `HEALTHEX_TOKEN_FILE` | Path to a **writable** `token.json` — the CLI rewrites it on every token refresh |
 
-> **Note:** `token.json` must be on writable storage. With restricted OAuth scopes in *Testing* mode,
-> refresh tokens expire roughly weekly. Re-run `healthex auth login` locally and supply the updated
-> `token.json` when that happens.
+> **Note:** `token.json` must be on writable storage. While the OAuth app is in *Testing* mode,
+> refresh tokens expire after 7 days; publishing the app to production removes that limit. Re-run
+> `healthex auth login` and supply the updated `token.json` if the token is ever revoked.
+
+### Exit status
+
+`sync` exits **0** on a clean run and **1** if any data type failed to fetch. A failed run still
+commits whatever did arrive, so a partial outage is recoverable on the next run — but the non-zero
+status means a scheduler can alert on it. The final line summarises the run:
+
+```
+sync complete: sleep=12 steps=3 rhr=1 hrv=1
+sync PARTIAL (failed: steps, rhr): sleep=12 steps=0 rhr=0 hrv=1
+```
+
+An empty response is not a failure: a genuinely quiet day reports `No steps data returned from API.`
+and still exits 0.
 
 ## Local database (for development)
 

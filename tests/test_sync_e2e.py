@@ -177,7 +177,7 @@ def test_sync_is_idempotent_end_to_end(
 def test_sync_survives_partial_api_outage(
     db_url: str, db_engine: Engine, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Steps/RHR/HRV failures are tolerated; sleep still lands."""
+    """Steps/RHR/HRV failures still commit sleep, but the run reports failure."""
     monkeypatch.setattr(settings, "database_url", db_url)
     respx.get(f"{BASE}/users/me/dataTypes/sleep/dataPoints").mock(
         return_value=httpx.Response(200, json={"dataPoints": [SLEEP_POINT]})
@@ -190,9 +190,9 @@ def test_sync_survives_partial_api_outage(
     with patch("healthex.cli.auth.get_credentials", return_value=_fake_creds()):
         result = runner.invoke(app, ["sync", "--since", "2026-06-01T00:00:00", "--user-id", "e2e"])
 
-    assert result.exit_code == 0, result.output
+    assert result.exit_code == 1, result.output  # degraded run must be visible
     counts = _counts(db_engine)
-    assert counts["sleep_sessions"] == 1
+    assert counts["sleep_sessions"] == 1  # what worked is still committed
     assert counts["daily_steps"] == 0
 
 
@@ -211,3 +211,66 @@ def test_sync_rejects_since_and_days_together(monkeypatch: pytest.MonkeyPatch) -
     with patch("healthex.cli.auth.get_credentials", return_value=_fake_creds()):
         result = runner.invoke(app, ["sync", "--since", "2026-06-01T00:00:00", "--days", "7"])
     assert result.exit_code != 0
+
+
+@respx.mock
+def test_partial_failure_exits_non_zero(db_url: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A scheduler must be able to tell a degraded run from a clean one."""
+    monkeypatch.setattr(settings, "database_url", db_url)
+    respx.get(f"{BASE}/users/me/dataTypes/sleep/dataPoints").mock(
+        return_value=httpx.Response(200, json={"dataPoints": [SLEEP_POINT]})
+    )
+    for dt_name in ("steps", "daily-resting-heart-rate", "daily-heart-rate-variability"):
+        respx.get(f"{BASE}/users/me/dataTypes/{dt_name}/dataPoints").mock(
+            return_value=httpx.Response(503, json={"error": "unavailable"})
+        )
+
+    with patch("healthex.cli.auth.get_credentials", return_value=_fake_creds()):
+        result = runner.invoke(app, ["sync", "--since", "2026-06-01T00:00:00", "--user-id", "e2e"])
+
+    assert result.exit_code == 1
+    assert "PARTIAL" in result.output
+    assert "steps" in result.output
+
+
+@respx.mock
+def test_clean_run_exits_zero_with_summary(db_url: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "database_url", db_url)
+    _route_api(sleep=[SLEEP_POINT], steps=[STEPS_POINT], rhr=[RHR_POINT], hrv=[HRV_POINT])
+
+    with patch("healthex.cli.auth.get_credentials", return_value=_fake_creds()):
+        result = runner.invoke(app, ["sync", "--since", "2026-06-01T00:00:00", "--user-id", "e2e"])
+
+    assert result.exit_code == 0
+    assert "sync complete: sleep=1 steps=1 rhr=1 hrv=1" in result.output
+    assert "PARTIAL" not in result.output
+
+
+@respx.mock
+def test_empty_api_response_is_not_a_failure(db_url: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A genuinely quiet day must exit 0, distinct from a fetch that failed."""
+    monkeypatch.setattr(settings, "database_url", db_url)
+    _route_api()
+
+    with patch("healthex.cli.auth.get_credentials", return_value=_fake_creds()):
+        result = runner.invoke(app, ["sync", "--since", "2026-06-01T00:00:00", "--user-id", "e2e"])
+
+    assert result.exit_code == 0
+    assert "sync complete: sleep=0 steps=0 rhr=0 hrv=0" in result.output
+    assert "No steps data returned" in result.output
+
+
+@respx.mock
+def test_total_outage_exits_non_zero(db_url: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Previously sleep failing raised an uncaught exception mid-run."""
+    monkeypatch.setattr(settings, "database_url", db_url)
+    for dt_name in ("sleep", "steps", "daily-resting-heart-rate", "daily-heart-rate-variability"):
+        respx.get(f"{BASE}/users/me/dataTypes/{dt_name}/dataPoints").mock(
+            return_value=httpx.Response(500, json={"error": "boom"})
+        )
+
+    with patch("healthex.cli.auth.get_credentials", return_value=_fake_creds()):
+        result = runner.invoke(app, ["sync", "--since", "2026-06-01T00:00:00", "--user-id", "e2e"])
+
+    assert result.exit_code == 1
+    assert "sleep" in result.output
