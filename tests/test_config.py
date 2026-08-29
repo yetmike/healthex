@@ -17,7 +17,8 @@ def test_defaults_when_no_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -
     monkeypatch.chdir(tmp_path)  # no .env to pick up
 
     s = Settings()
-    assert s.database_url.startswith("postgresql+psycopg://")
+    # No default: a localhost fallback would silently target the wrong database.
+    assert s.database_url is None
     assert s.google_client_secret_file == Path("client_secret.json")
     assert s.healthex_token_file == Path("token.json")
 

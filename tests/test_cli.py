@@ -2,6 +2,7 @@
 
 from unittest.mock import MagicMock, patch
 
+import pytest
 from typer.testing import CliRunner
 
 from healthex.cli import app
@@ -65,3 +66,24 @@ def test_sync_since_accepted() -> None:
     ):
         result = runner.invoke(app, ["sync", "--since", "2026-01-01T00:00:00"])
     assert result.exit_code == 0
+
+
+def test_missing_database_url_is_a_clear_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No URL anywhere must fail loudly, not fall back to localhost."""
+    from healthex.config import settings
+
+    monkeypatch.setattr(settings, "database_url", None)
+    result = runner.invoke(app, ["db-init"])
+
+    assert result.exit_code != 0
+    assert "No database URL" in result.output
+
+
+def test_database_url_flag_overrides_env(monkeypatch: pytest.MonkeyPatch, db_url: str) -> None:
+    """--database-url wins over DATABASE_URL/.env."""
+    from healthex.cli import _resolve_db_url
+    from healthex.config import settings
+
+    monkeypatch.setattr(settings, "database_url", "postgresql+psycopg://from:env@h/db")
+    assert _resolve_db_url(db_url) == db_url
+    assert _resolve_db_url(None) == "postgresql+psycopg://from:env@h/db"

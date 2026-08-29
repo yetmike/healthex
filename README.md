@@ -75,6 +75,21 @@ uv run healthex db-init
 uv run healthex sync --since "2024-01-01T00:00:00"
 ```
 
+## Database connection
+
+The target database is resolved in this order:
+
+1. `--database-url` on `sync` / `db-init`
+2. the `DATABASE_URL` environment variable
+3. `DATABASE_URL` in a `.env` file **in the current working directory**
+
+There is no default. If none of the three is set, the command stops with an error rather than
+guessing — a localhost fallback would quietly write your health data into whatever Postgres happened
+to be listening.
+
+Note that `.env` is read relative to where you run the command, so it only applies when working
+inside a checkout. Installed as a tool, export `DATABASE_URL` or pass `--database-url`.
+
 ## Google API credentials
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com) and create a project.
@@ -115,7 +130,7 @@ Required env vars:
 
 | Variable | Description |
 |---|---|
-| `DATABASE_URL` | PostgreSQL DSN (`postgresql+psycopg://...`) |
+| `DATABASE_URL` | PostgreSQL DSN (`postgresql+psycopg://...`). **Required** — there is no default. |
 | `GOOGLE_CLIENT_SECRET_FILE` | Path to `client_secret.json` inside the container |
 | `HEALTHEX_TOKEN_FILE` | Path to a **writable** `token.json` — the CLI rewrites it on every token refresh |
 

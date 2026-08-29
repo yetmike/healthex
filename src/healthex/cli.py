@@ -22,6 +22,17 @@ def auth_login() -> None:
     typer.echo("Authenticated. Token cached.")
 
 
+def _resolve_db_url(override: str | None) -> str:
+    """--database-url beats DATABASE_URL beats .env; nothing means stop."""
+    url = override or settings.database_url
+    if not url:
+        raise typer.BadParameter(
+            "No database URL. Pass --database-url, set the DATABASE_URL environment "
+            "variable, or put DATABASE_URL in a .env file in the current directory."
+        )
+    return url
+
+
 @app.command("sync")
 def sync(
     since: str | None = typer.Option(
@@ -31,6 +42,9 @@ def sync(
         None, help="Sync the last N days (computes --since automatically)."
     ),  # noqa: E501
     user_id: str = typer.Option("me", help="User identifier stored in the DB (default: me)."),
+    database_url: str | None = typer.Option(
+        None, help="PostgreSQL DSN. Overrides DATABASE_URL and .env."
+    ),
 ) -> None:
     """Fetch sleep, steps, RHR and HRV from Google Health and upsert into PostgreSQL."""
     if since is not None and days is not None:
@@ -39,6 +53,7 @@ def sync(
         since = (dt.datetime.now() - dt.timedelta(days=days)).strftime("%Y-%m-%dT00:00:00")
     if since is None:
         raise typer.BadParameter("Provide --since or --days.")
+    db_url = _resolve_db_url(database_url)
     creds = auth.get_credentials(settings.google_client_secret_file, settings.healthex_token_file)
 
     failed: list[str] = []
@@ -68,25 +83,25 @@ def sync(
 
     if sleep_points:
         rows = [sleep_mod.parse_session(p, user_id=user_id) for p in sleep_points]
-        stored["sleep"] = repository.upsert_sleep(settings.database_url, rows)
+        stored["sleep"] = repository.upsert_sleep(db_url, rows)
     elif sleep_points is not None:
         typer.echo("No sleep data returned from API.")
 
     if step_points:
         step_rows = steps_mod.aggregate_days(step_points, user_id=user_id)
-        stored["steps"] = repository.upsert_steps(settings.database_url, step_rows)
+        stored["steps"] = repository.upsert_steps(db_url, step_rows)
     elif step_points is not None:
         typer.echo("No steps data returned from API.")
 
     if rhr_points:
         rhr_rows = [r for p in rhr_points if (r := heart.parse_rhr(p, user_id=user_id)) is not None]
-        stored["rhr"] = repository.upsert_rhr(settings.database_url, rhr_rows)
+        stored["rhr"] = repository.upsert_rhr(db_url, rhr_rows)
     elif rhr_points is not None:
         typer.echo("No RHR data returned from API.")
 
     if hrv_points:
         hrv_rows = [r for p in hrv_points if (r := heart.parse_hrv(p, user_id=user_id)) is not None]
-        stored["hrv"] = repository.upsert_hrv(settings.database_url, hrv_rows)
+        stored["hrv"] = repository.upsert_hrv(db_url, hrv_rows)
     elif hrv_points is not None:
         typer.echo("No HRV data returned from API.")
 
@@ -100,11 +115,15 @@ def sync(
 
 
 @app.command("db-init")
-def db_init() -> None:
-    """Apply pending schema migrations to DATABASE_URL (idempotent)."""
+def db_init(
+    database_url: str | None = typer.Option(
+        None, help="PostgreSQL DSN. Overrides DATABASE_URL and .env."
+    ),
+) -> None:
+    """Apply pending schema migrations to the target database (idempotent)."""
     from healthex import migrate  # noqa: PLC0415
 
-    applied = migrate.apply(settings.database_url)
+    applied = migrate.apply(_resolve_db_url(database_url))
     if applied:
         for name in applied:
             typer.echo(f"Applied {name}")
