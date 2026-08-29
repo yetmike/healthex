@@ -112,3 +112,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for more detail.
 ## License
 
 [Apache-2.0](LICENSE)
+
+## Privacy
+
+healthex is not a hosted service: your health data goes from the Google Health API
+to your own PostgreSQL database and nowhere else. See [PRIVACY.md](PRIVACY.md).
