@@ -25,19 +25,23 @@ Designed to feed a Grafana dashboard but works with any SQL tool.
 ### As a command-line tool
 
 ```bash
-uv tool install "git+https://github.com/yetmike/healthex@v0.3.0"
+uv tool install "git+https://github.com/yetmike/healthex"
 ```
 
 This puts a `healthex` command on your PATH in its own isolated environment. `pipx` works too:
 
 ```bash
-pipx install "git+https://github.com/yetmike/healthex@v0.3.0"
+pipx install "git+https://github.com/yetmike/healthex"
 ```
 
-Pin a tag rather than tracking `main`, so an upgrade is something you choose. To move to a new
-release, `uv tool upgrade healthex` after re-installing at the newer tag, or
-`uv tool install --force "git+https://github.com/yetmike/healthex@v0.4.0"`. Remove it with
-`uv tool uninstall healthex`.
+That installs the latest code on `main`. Update at any time with:
+
+```bash
+uv tool upgrade healthex
+```
+
+Remove it with `uv tool uninstall healthex`. To install a specific release instead, append the tag:
+`"git+https://github.com/yetmike/healthex@v0.3.0"`.
 
 Requires Python 3.12+. For scheduled or containerised runs, use the published image instead — see
 [Container / scheduled sync](#container--scheduled-sync).
