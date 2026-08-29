@@ -1,0 +1,1328 @@
+{
+  "title": "healthex \u2014 Health",
+  "uid": "healthex-health",
+  "schemaVersion": 39,
+  "refresh": "1h",
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "graphTooltip": 1,
+  "links": [
+    {
+      "title": "Google Health API",
+      "url": "https://developers.google.com/health/api",
+      "type": "link",
+      "icon": "external link",
+      "tooltip": "Google Health REST API v4: the source of all data in this dashboard",
+      "targetBlank": true
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "user_id",
+        "label": "User",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "${DS_HEALTHEX_POSTGRES}"
+        },
+        "query": "SELECT DISTINCT user_id FROM sleep_sessions ORDER BY 1",
+        "refresh": 1,
+        "includeAll": false,
+        "multi": false,
+        "current": {
+          "text": "me",
+          "value": "me"
+        }
+      },
+      {
+        "name": "tz",
+        "label": "Timezone",
+        "type": "textbox",
+        "query": "Europe/Berlin",
+        "current": {
+          "text": "Europe/Berlin",
+          "value": "Europe/Berlin"
+        },
+        "description": "IANA zone used to bucket bedtime and wake time"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 300,
+      "title": "HEART",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 21,
+      "title": "Avg RHR (7d)",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_HEALTHEX_POSTGRES}"
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT ROUND(AVG(bpm)) AS value FROM daily_rhr WHERE user_id = '$user_id' AND rhr_date >= CURRENT_DATE - INTERVAL '7 days'",
+          "format": "table",
+          "refId": "K"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "No data",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              },
+              {
+                "color": "#FF9830",
+                "value": 70
+              },
+              {
+                "color": "#F2495C",
+                "value": 80
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "text": {
+          "valueSize": 40
+        }
+      }
+    },
+    {
+      "id": 22,
+      "title": "Avg RHR (30d)",
+      "type": "stat",
+      "gridPos": {
+        "x": 6,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_HEALTHEX_POSTGRES}"
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT ROUND(AVG(bpm)) AS value FROM daily_rhr WHERE user_id = '$user_id' AND rhr_date >= CURRENT_DATE - INTERVAL '30 days'",
+          "format": "table",
+          "refId": "L"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "No data",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              },
+              {
+                "color": "#FF9830",
+                "value": 70
+              },
+              {
+                "color": "#F2495C",
+                "value": 80
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "text": {
+          "valueSize": 40
+        }
+      }
+    },
+    {
+      "id": 23,
+      "title": "Avg HRV (7d)",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_HEALTHEX_POSTGRES}"
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT ROUND(AVG(avg_hrv_ms)) AS value FROM daily_hrv WHERE user_id = '$user_id' AND hrv_date >= CURRENT_DATE - INTERVAL '7 days'",
+          "format": "table",
+          "refId": "M"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "noValue": "No data",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#F2495C",
+                "value": null
+              },
+              {
+                "color": "#FF9830",
+                "value": 40
+              },
+              {
+                "color": "#73BF69",
+                "value": 60
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "text": {
+          "valueSize": 40
+        }
+      }
+    },
+    {
+      "id": 24,
+      "title": "Avg HRV (30d)",
+      "type": "stat",
+      "gridPos": {
+        "x": 18,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_HEALTHEX_POSTGRES}"
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT ROUND(AVG(avg_hrv_ms)) AS value FROM daily_hrv WHERE user_id = '$user_id' AND hrv_date >= CURRENT_DATE - INTERVAL '30 days'",
+          "format": "table",
+          "refId": "N"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "noValue": "No data",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#F2495C",
+                "value": null
+              },
+              {
+                "color": "#FF9830",
+                "value": 40
+              },
+              {
+                "color": "#73BF69",
+                "value": 60
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "text": {
+          "valueSize": 40
+        }
+      }
+    },
+    {
+      "id": 25,
+      "title": "RHR and HRV trend",
+      "description": "RHR (left axis, bpm) and HRV RMSSD (right axis, ms). They typically move inversely: lower RHR and higher HRV indicate better cardiovascular fitness and recovery.",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 24,
+        "h": 9
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_HEALTHEX_POSTGRES}"
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT rhr_date AS time, bpm AS \"RHR (bpm)\" FROM daily_rhr WHERE user_id = '$user_id' ORDER BY 1",
+          "format": "time_series",
+          "refId": "O"
+        },
+        {
+          "rawSql": "SELECT hrv_date AS time, avg_hrv_ms AS \"HRV (ms)\" FROM daily_hrv WHERE user_id = '$user_id' ORDER BY 1",
+          "format": "time_series",
+          "refId": "P"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "spanNulls": true,
+            "pointSize": 5,
+            "showPoints": "always"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "RHR (bpm)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2495C"
+                }
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "left"
+              },
+              {
+                "id": "custom.axisLabel",
+                "value": "RHR (bpm)"
+              },
+              {
+                "id": "unit",
+                "value": "none"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "HRV (ms)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#73BF69"
+                }
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
+                "id": "custom.axisLabel",
+                "value": "HRV (ms)"
+              },
+              {
+                "id": "unit",
+                "value": "ms"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 301,
+      "title": "How to improve RHR and HRV",
+      "type": "row",
+      "collapsed": true,
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 24,
+        "h": 1
+      },
+      "panels": [
+        {
+          "id": 28,
+          "title": "Benchmarks by age",
+          "type": "text",
+          "gridPos": {
+            "x": 0,
+            "y": 15,
+            "w": 8,
+            "h": 10
+          },
+          "options": {
+            "mode": "markdown",
+            "content": "### Benchmarks by age\n\n| Age | RHR (bpm) | HRV RMSSD (ms) |\n|-----|-----------|----------------|\n| 20-29 | 56-65 | 60-90 |\n| 30-39 | 58-67 | 45-70 |\n| 40-49 | 59-68 | 35-55 |\n| 50-59 | 60-69 | 25-45 |\n| 60+ | 60-70 | 20-35 |\n\nRHR below 60 = athletic. Above 80 = warrants attention.\n\nHRV declines ~2-3% per year naturally after 25. Your personal trend matters more than the absolute number: a drop of 10+ ms below your 30-day average is a reliable signal of incomplete recovery or illness onset.\n\n**Sources:** HRV ranges: [Sammito et al. (2021), European Heart Journal Digital Health](https://pubmed.ncbi.nlm.nih.gov/34447956) (most recent systematic review; earlier reference: [Shaffer & Ginsberg (2017)](https://pubmed.ncbi.nlm.nih.gov/29034226)) | RHR ranges: derived from population surveys (NHANES, Framingham Heart Study) - no single normative paper; [Tverdal et al. (2008)](https://pubmed.ncbi.nlm.nih.gov/18285398) shows why low RHR matters (mortality association, not norms)"
+          },
+          "fieldConfig": {
+            "defaults": {},
+            "overrides": []
+          }
+        },
+        {
+          "id": 29,
+          "title": "How to lower RHR",
+          "type": "text",
+          "gridPos": {
+            "x": 8,
+            "y": 15,
+            "w": 8,
+            "h": 10
+          },
+          "options": {
+            "mode": "markdown",
+            "content": "### How to lower RHR\n\n**Biggest levers (in order of impact):**\n\n1. **Aerobic fitness** - zone 2 cardio 150+ min/week (running, cycling, swimming). The single most effective intervention. A fit 50-year-old typically has a lower RHR than a sedentary 30-year-old.\n2. **Consistent sleep** - 7-9h at fixed times. Sleep debt raises resting HR by 3-5 bpm.\n3. **Reduce alcohol** - even 1-2 drinks elevates RHR the following night.\n4. **Stress management** - chronic cortisol keeps baseline HR elevated.\n5. **Hydration** - dehydration acutely raises HR 5-8 bpm.\n\nExpect 6-12 weeks to see meaningful change from training."
+          },
+          "fieldConfig": {
+            "defaults": {},
+            "overrides": []
+          }
+        },
+        {
+          "id": 30,
+          "title": "How to raise HRV",
+          "type": "text",
+          "gridPos": {
+            "x": 16,
+            "y": 15,
+            "w": 8,
+            "h": 10
+          },
+          "options": {
+            "mode": "markdown",
+            "content": "### How to raise HRV\n\n**Biggest levers (in order of impact):**\n\n1. **Aerobic fitness** - same zone 2 training. Directly trains parasympathetic nervous system tone.\n2. **Sleep schedule consistency** - irregular sleep times suppress HRV even at adequate total duration.\n3. **Alcohol cutoff** - alcohol suppresses HRV the same night, reliably. Even moderate amounts.\n4. **Caffeine timing** - cutoff 6h before sleep; late caffeine fragments sleep architecture and reduces HRV.\n5. **Cold exposure** - cold showers or ice baths acutely boost HRV; consistent practice builds baseline.\n6. **Slow breathing** - 4-7s inhale / 6-8s exhale activates the vagus nerve. 5-10 min/day raises HRV measurably within weeks.\n\nSingle-day HRV is noisy - use the 7-day rolling average on this dashboard, not individual readings."
+          },
+          "fieldConfig": {
+            "defaults": {},
+            "overrides": []
+          }
+        }
+      ]
+    },
+    {
+      "id": 100,
+      "title": "SLEEP",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 1,
+      "title": "Avg Sleep (7d)",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_HEALTHEX_POSTGRES}"
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT ROUND(AVG(minutes_asleep) * 60) AS value FROM sleep_sessions WHERE user_id = '$user_id' AND civil_date >= CURRENT_DATE - INTERVAL '7 days'",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dthms",
+          "noValue": "No data",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#F2495C",
+                "value": null
+              },
+              {
+                "color": "#FF9830",
+                "value": 21600
+              },
+              {
+                "color": "#73BF69",
+                "value": 25200
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "text": {
+          "valueSize": 40
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Avg Sleep (30d)",
+      "type": "stat",
+      "gridPos": {
+        "x": 6,
+        "y": 16,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_HEALTHEX_POSTGRES}"
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT ROUND(AVG(minutes_asleep) * 60) AS value FROM sleep_sessions WHERE user_id = '$user_id' AND civil_date >= CURRENT_DATE - INTERVAL '30 days'",
+          "format": "table",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dthms",
+          "noValue": "No data",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#F2495C",
+                "value": null
+              },
+              {
+                "color": "#FF9830",
+                "value": 21600
+              },
+              {
+                "color": "#73BF69",
+                "value": 25200
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "text": {
+          "valueSize": 40
+        }
+      }
+    },
+    {
+      "id": 31,
+      "title": "Avg Bedtime (30d)",
+      "description": "Average time falling asleep over the past 30 days, in Central European Time.",
+      "type": "table",
+      "gridPos": {
+        "x": 12,
+        "y": 16,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_HEALTHEX_POSTGRES}"
+      },
+      "targets": [
+        {
+          "rawSql": "WITH main_sessions AS (SELECT DISTINCT ON (civil_date) (start_time AT TIME ZONE '$tz')::time AS sleep_time FROM sleep_sessions WHERE user_id = '$user_id' AND civil_date >= CURRENT_DATE - INTERVAL '30 days' ORDER BY civil_date, minutes_asleep DESC) SELECT to_char((to_timestamp(AVG(CASE WHEN EXTRACT(HOUR FROM sleep_time) < 12 THEN EXTRACT(EPOCH FROM sleep_time) + 86400 ELSE EXTRACT(EPOCH FROM sleep_time) END)) AT TIME ZONE 'UTC')::time, 'HH24:MI') AS \"Bedtime\" FROM main_sessions",
+          "format": "table",
+          "refId": "Q"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "center",
+            "cellOptions": {
+              "type": "color-background",
+              "mode": "basic"
+            }
+          },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#5794F2"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#5794F2",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "footer": {
+          "show": false
+        },
+        "showHeader": false,
+        "cellHeight": "xl"
+      },
+      "transformations": []
+    },
+    {
+      "id": 32,
+      "title": "Avg Wake Time (30d)",
+      "description": "Average wake-up time over the past 30 days, in Central European Time.",
+      "type": "table",
+      "gridPos": {
+        "x": 18,
+        "y": 16,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_HEALTHEX_POSTGRES}"
+      },
+      "targets": [
+        {
+          "rawSql": "WITH main_sessions AS (SELECT DISTINCT ON (civil_date) (end_time AT TIME ZONE '$tz')::time AS wake_time FROM sleep_sessions WHERE user_id = '$user_id' AND civil_date >= CURRENT_DATE - INTERVAL '30 days' ORDER BY civil_date, minutes_asleep DESC) SELECT to_char((to_timestamp(AVG(EXTRACT(EPOCH FROM wake_time))) AT TIME ZONE 'UTC')::time, 'HH24:MI') AS \"Wake\" FROM main_sessions",
+          "format": "table",
+          "refId": "R"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "center",
+            "cellOptions": {
+              "type": "color-background",
+              "mode": "basic"
+            }
+          },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#73BF69"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "footer": {
+          "show": false
+        },
+        "showHeader": false,
+        "cellHeight": "xl"
+      },
+      "transformations": []
+    },
+    {
+      "id": 5,
+      "title": "Sleep Stages",
+      "type": "barchart",
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_HEALTHEX_POSTGRES}"
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT civil_date AS time, minutes_light AS \"Light\", minutes_deep AS \"Deep\", minutes_rem AS \"REM\", minutes_awake AS \"Awake\" FROM sleep_sessions WHERE user_id = '$user_id' AND civil_date IS NOT NULL ORDER BY 1",
+          "format": "table",
+          "refId": "E"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "m",
+          "custom": {
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Light"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Deep"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "REM"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#73BF69"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Awake"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2495C"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "xField": "time",
+        "stacking": "normal",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "xTickLabelRotation": -45,
+        "xTickLabelSpacing": 100
+      }
+    },
+    {
+      "id": 4,
+      "title": "Nightly Sleep Duration",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_HEALTHEX_POSTGRES}"
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT civil_date AS time, minutes_asleep * 60 AS \"duration\" FROM sleep_sessions WHERE user_id = '$user_id' AND civil_date IS NOT NULL ORDER BY 1",
+          "format": "time_series",
+          "refId": "D"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dthms",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#F2495C",
+                "value": null
+              },
+              {
+                "color": "#FF9830",
+                "value": 21600
+              },
+              {
+                "color": "#73BF69",
+                "value": 25200
+              }
+            ]
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "gradientMode": "scheme",
+            "spanNulls": true,
+            "pointSize": 5,
+            "showPoints": "always"
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      }
+    },
+    {
+      "id": 901,
+      "title": "Time to Fall Asleep",
+      "type": "timeseries",
+      "description": "Minutes from the start of the sleep session to the first non-AWAKE stage, stored by healthex as sleep_latency_minutes. The API's own summary.minutesToFallAsleep is unreliable on some devices (it reports 0 for every session on certain Fitbit models), so healthex derives this from the stage timeline at ingest. Under 20 minutes is typical; consistently under 5 can indicate sleep deprivation, over 30 suggests difficulty settling.",
+      "gridPos": {
+        "x": 0,
+        "y": 36,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_HEALTHEX_POSTGRES}"
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT civil_date AS time, sleep_latency_minutes AS \"latency\" FROM sleep_sessions WHERE user_id = '$user_id' AND civil_date IS NOT NULL AND sleep_latency_minutes IS NOT NULL ORDER BY 1",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "m",
+          "min": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              },
+              {
+                "color": "#FF9830",
+                "value": 20
+              },
+              {
+                "color": "#F2495C",
+                "value": 30
+              }
+            ]
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "gradientMode": "scheme",
+            "spanNulls": true,
+            "pointSize": 5,
+            "showPoints": "always"
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      }
+    },
+    {
+      "id": 101,
+      "title": "Sleep Score (derived)",
+      "type": "row",
+      "collapsed": true,
+      "gridPos": {
+        "x": 0,
+        "y": 36,
+        "w": 24,
+        "h": 1
+      },
+      "panels": [
+        {
+          "id": 6,
+          "title": "Sleep Score (derived)",
+          "description": "Proxy 0-100: duration (0-40) + efficiency (0-30) + stage quality (0-30). Not Fitbit's score, which uses HR and SpO2 not available in the API.",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 0,
+            "y": 37,
+            "w": 24,
+            "h": 8
+          },
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_HEALTHEX_POSTGRES}"
+          },
+          "targets": [
+            {
+              "rawSql": "SELECT civil_date AS time, sleep_score AS \"score\" FROM sleep_sessions WHERE user_id = '$user_id' AND sleep_score IS NOT NULL AND civil_date IS NOT NULL ORDER BY 1",
+              "format": "time_series",
+              "refId": "F"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "min": 0,
+              "max": 100,
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "#F2495C",
+                    "value": null
+                  },
+                  {
+                    "color": "#FF9830",
+                    "value": 60
+                  },
+                  {
+                    "color": "#73BF69",
+                    "value": 80
+                  }
+                ]
+              },
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 20,
+                "gradientMode": "scheme",
+                "spanNulls": true,
+                "pointSize": 5,
+                "showPoints": "always"
+              }
+            }
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 102,
+      "title": "How to improve sleep",
+      "type": "row",
+      "collapsed": true,
+      "gridPos": {
+        "x": 0,
+        "y": 37,
+        "w": 24,
+        "h": 1
+      },
+      "panels": [
+        {
+          "id": 33,
+          "title": "Sleep hygiene",
+          "type": "text",
+          "gridPos": {
+            "x": 0,
+            "y": 38,
+            "w": 8,
+            "h": 10
+          },
+          "options": {
+            "mode": "markdown",
+            "content": "### Sleep hygiene\n\n1. **Fixed wake time** - same time every day including weekends. This is the single highest-leverage habit. It anchors your circadian rhythm and builds sleep pressure reliably.\n2. **No screens 1h before bed** - blue light suppresses melatonin onset by 1-3 hours. Use blue-light glasses or night mode if unavoidable.\n3. **Dark, cool room** - 16-19C is optimal. Core body temperature must drop ~1C to initiate sleep; a cool room accelerates this.\n4. **No alcohol** - alcohol induces sleep but fragments it severely in the second half of the night. REM is suppressed even at 1-2 drinks.\n5. **Caffeine cutoff at 14:00** - caffeine half-life is 5-7h. A coffee at 15:00 still has half its caffeine at 21:00.\n6. **Get sunlight before 10:00** - 10-30 min of morning light sets your circadian clock and advances melatonin onset to the correct evening window."
+          },
+          "fieldConfig": {
+            "defaults": {},
+            "overrides": []
+          }
+        },
+        {
+          "id": 34,
+          "title": "Sleep stages: what to optimise",
+          "type": "text",
+          "gridPos": {
+            "x": 8,
+            "y": 38,
+            "w": 8,
+            "h": 10
+          },
+          "options": {
+            "mode": "markdown",
+            "content": "### Sleep stages: what to optimise\n\n**Deep sleep (slow-wave)** - physically restorative, memory consolidation, growth hormone release. Mostly in the first half of the night.\n- Boosted by: exercise (especially aerobic), consistent wake time, cold room, avoiding alcohol.\n- Suppressed by: alcohol, sedatives, late eating.\n\n**REM sleep** - emotional regulation, creativity, procedural memory. Mostly in the second half of the night.\n- Boosted by: longer sleep (REM is last in the cycle), stress reduction, consistent schedule.\n- Suppressed by: alcohol, most sleep medications, sleep deprivation.\n\n**Light sleep** - transitional; not harmful but high ratios indicate sleep fragmentation.\n\nTarget rough proportions per night: 20-25% deep, 20-25% REM, 50-55% light, <5% awake."
+          },
+          "fieldConfig": {
+            "defaults": {},
+            "overrides": []
+          }
+        },
+        {
+          "id": 35,
+          "title": "If you can't fall asleep",
+          "type": "text",
+          "gridPos": {
+            "x": 16,
+            "y": 38,
+            "w": 8,
+            "h": 10
+          },
+          "options": {
+            "mode": "markdown",
+            "content": "### If you can't fall asleep\n\n**Don't lie in bed awake** - bed becomes associated with wakefulness. After 20 min of lying awake, get up, do something calm in dim light, return when sleepy. This is stimulus control therapy, the most evidence-backed behavioural intervention for insomnia.\n\n**Sleep restriction** - counterintuitive but effective for chronic insomnia: temporarily restrict time in bed to match actual sleep time, then gradually expand. Builds sleep pressure. Do not nap.\n\n**4-7-8 breathing** - inhale 4s, hold 7s, exhale 8s. Activates parasympathetic nervous system. 3-4 cycles before sleep.\n\n**Don't clock-watch** - checking the time increases arousal and anxiety. Turn the clock away.\n\n**Avoid naps after 15:00** - naps reduce sleep pressure for the evening and make falling asleep harder.\n\n**Sources:** [Walker (2017) Why We Sleep](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6143346/) | [CBT-I overview (PubMed)](https://pubmed.ncbi.nlm.nih.gov/25454674/)"
+          },
+          "fieldConfig": {
+            "defaults": {},
+            "overrides": []
+          }
+        }
+      ]
+    },
+    {
+      "id": 200,
+      "title": "STEPS",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 48,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 11,
+      "title": "Avg Steps (7d)",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 49,
+        "w": 12,
+        "h": 4
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_HEALTHEX_POSTGRES}"
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT ROUND(AVG(steps)) AS value FROM daily_steps WHERE user_id = '$user_id' AND step_date >= CURRENT_DATE - INTERVAL '7 days'",
+          "format": "table",
+          "refId": "G"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "No data",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#F2495C",
+                "value": null
+              },
+              {
+                "color": "#FF9830",
+                "value": 5000
+              },
+              {
+                "color": "#73BF69",
+                "value": 8000
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "text": {
+          "valueSize": 40
+        }
+      }
+    },
+    {
+      "id": 12,
+      "title": "Avg Steps (30d)",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 49,
+        "w": 12,
+        "h": 4
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_HEALTHEX_POSTGRES}"
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT ROUND(AVG(steps)) AS value FROM daily_steps WHERE user_id = '$user_id' AND step_date >= CURRENT_DATE - INTERVAL '30 days'",
+          "format": "table",
+          "refId": "H"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "No data",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#F2495C",
+                "value": null
+              },
+              {
+                "color": "#FF9830",
+                "value": 5000
+              },
+              {
+                "color": "#73BF69",
+                "value": 8000
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "text": {
+          "valueSize": 40
+        }
+      }
+    },
+    {
+      "id": 14,
+      "title": "Steps per Day",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 53,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_HEALTHEX_POSTGRES}"
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT step_date AS time, steps AS \"steps\" FROM daily_steps WHERE user_id = '$user_id' ORDER BY 1",
+          "format": "time_series",
+          "refId": "J"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#73BF69"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "gradientMode": "opacity",
+            "spanNulls": false,
+            "pointSize": 5,
+            "showPoints": "always",
+            "drawStyle": "bars"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#F2495C",
+                "value": null
+              },
+              {
+                "color": "#FF9830",
+                "value": 5000
+              },
+              {
+                "color": "#73BF69",
+                "value": 8000
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      }
+    }
+  ],
+  "__inputs": [
+    {
+      "name": "DS_HEALTHEX_POSTGRES",
+      "label": "healthex PostgreSQL",
+      "description": "The PostgreSQL database healthex syncs into",
+      "type": "datasource",
+      "pluginId": "grafana-postgresql-datasource",
+      "pluginName": "PostgreSQL"
+    }
+  ],
+  "timezone": "browser"
+}

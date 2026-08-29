@@ -75,6 +75,12 @@ uv run healthex db-init
 uv run healthex sync --since "2024-01-01T00:00:00"
 ```
 
+## Dashboards
+
+An example Grafana dashboard is in [`examples/grafana-dashboard.json`](examples/grafana-dashboard.json)
+— import it and point it at your database. It is a starting point rather than a supported artefact;
+see [`examples/README.md`](examples/README.md).
+
 ## Database connection
 
 The target database is resolved in this order:
@@ -108,8 +114,8 @@ inside a checkout. Installed as a tool, export `DATABASE_URL` or pass `--databas
 | Command | Description |
 |---|---|
 | `healthex auth login` | OAuth flow - opens browser, caches token |
-| `healthex db-init` | Create tables (idempotent) |
-| `healthex sync --since ISO_DATE` | Fetch and upsert all data types |
+| `healthex db-init` | Apply pending schema migrations (idempotent) |
+| `healthex sync --since ISO_DATE` | Fetch and upsert all data types (applies migrations first) |
 
 ## Container / scheduled sync
 
