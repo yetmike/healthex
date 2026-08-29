@@ -61,8 +61,8 @@ def sync(
     with client.HealthClient(str(creds.token)) as hc:
         sleep_points = fetch("sleep", lambda: hc.list_sleep(since))
         step_points = fetch("steps", lambda: hc.list_steps(since))
-        rhr_points = fetch("rhr", lambda: hc.list_daily("daily-resting-heart-rate"))
-        hrv_points = fetch("hrv", lambda: hc.list_daily("daily-heart-rate-variability"))
+        rhr_points = fetch("rhr", lambda: hc.list_daily("daily-resting-heart-rate", since))
+        hrv_points = fetch("hrv", lambda: hc.list_daily("daily-heart-rate-variability", since))
 
     stored = dict.fromkeys(("sleep", "steps", "rhr", "hrv"), 0)
 
