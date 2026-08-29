@@ -20,11 +20,41 @@ Designed to feed a Grafana dashboard but works with any SQL tool.
 - PostgreSQL 15+
 - A Google account with health data synced from a Fitbit or Pixel Watch device
 
+## Install
+
+### As a command-line tool
+
+```bash
+uv tool install "git+https://github.com/yetmike/healthex@v0.3.0"
+```
+
+This puts a `healthex` command on your PATH in its own isolated environment. `pipx` works too:
+
+```bash
+pipx install "git+https://github.com/yetmike/healthex@v0.3.0"
+```
+
+Pin a tag rather than tracking `main`, so an upgrade is something you choose. To move to a new
+release, `uv tool upgrade healthex` after re-installing at the newer tag, or
+`uv tool install --force "git+https://github.com/yetmike/healthex@v0.4.0"`. Remove it with
+`uv tool uninstall healthex`.
+
+Requires Python 3.12+. For scheduled or containerised runs, use the published image instead — see
+[Container / scheduled sync](#container--scheduled-sync).
+
+### From source (for development)
+
+```bash
+git clone https://github.com/yetmike/healthex && cd healthex
+uv sync
+```
+
+Commands are then run as `uv run healthex ...` rather than `healthex ...`.
+
 ## Quick start
 
 ```bash
-# 1. Install
-uv sync
+# 1. Install (see above)
 
 # 2. Configure
 cp .env.example .env
