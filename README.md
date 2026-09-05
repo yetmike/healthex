@@ -4,6 +4,8 @@ Python CLI that syncs Google Health data (sleep, steps, RHR, HRV) from Fitbit or
 
 Designed to feed a Grafana dashboard but works with any SQL tool.
 
+![healthex: install, authenticate, and sync 30 days of Google Health data into PostgreSQL](docs/demo.gif)
+
 ## Features
 
 - Sleep sessions with stage breakdown (light / deep / REM / awake)

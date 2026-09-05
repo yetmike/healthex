@@ -16,6 +16,8 @@ token.json
 
 # dev-only files
 tests
+docs
+examples
 docker-compose.yml
 healthex-mvp-plan.md
 .pre-commit-config.yaml
