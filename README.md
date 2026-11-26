@@ -12,6 +12,11 @@ Designed to feed a Grafana dashboard but works with any SQL tool.
 - Daily step counts
 - Resting Heart Rate (RHR) — calculated from sleep via Fitbit
 - Heart Rate Variability (HRV) — RMSSD measured during sleep
+- Daily activity: distance, floors, calories (total and active), active zone minutes, time in
+  heart-rate zones, sedentary time
+- Nightly vitals: SpO2, breathing rate, skin temperature, plus VO2 max, weight and body fat
+- Exercise sessions (type, duration, calories, distance, average heart rate)
+- Heart rate through the day, in 5-minute buckets
 - Idempotent upserts — safe to re-run, no duplicates
 - Secrets scan and type checking in pre-commit hooks
 
@@ -82,6 +87,23 @@ uv run healthex sync --since "2024-01-01T00:00:00"
 An example Grafana dashboard is in [`examples/grafana-dashboard.json`](examples/grafana-dashboard.json)
 — import it and point it at your database. It is a starting point rather than a supported artefact;
 see [`examples/README.md`](examples/README.md).
+
+## Tables
+
+| Table | One row per | Holds |
+|---|---|---|
+| `sleep_sessions` | sleep session | stages, efficiency, latency, derived score |
+| `daily_steps`, `daily_rhr`, `daily_hrv` | day | steps, resting heart rate, HRV |
+| `daily_metrics` | day and metric | everything else that is daily, long-format: `metric`, `value` |
+| `exercises` | workout | type, duration, calories, distance, average heart rate, raw payload |
+| `heart_rate` | 5 minutes | average, minimum and maximum bpm |
+
+`daily_metrics.metric` is `<data type>.<field>`, named mechanically from the Google Health API
+response with the unit the API uses — `distance.millimeters_sum`, `total_calories.kcal_sum`,
+`daily_oxygen_saturation.average_percentage`. `SELECT DISTINCT metric FROM daily_metrics` lists what
+your device actually reports; a day the device was not worn has no row rather than a zero.
+
+Google's own scores (readiness, sleep score, stress, cardio load) are not in the API.
 
 ## Database connection
 

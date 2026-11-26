@@ -1312,6 +1312,438 @@
           "mode": "single"
         }
       }
+    },
+    {
+      "id": 1001,
+      "type": "row",
+      "title": "ACTIVITY",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 61,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 1002,
+      "title": "Active Zone Minutes",
+      "type": "timeseries",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_HEALTHEX_POSTGRES}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 62,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT metric_date AS time, MAX(value) FILTER (WHERE metric = 'active_zone_minutes.sum_in_fat_burn_heart_zone') AS \"Fat burn\", MAX(value) FILTER (WHERE metric = 'active_zone_minutes.sum_in_cardio_heart_zone') AS \"Cardio\", MAX(value) FILTER (WHERE metric = 'active_zone_minutes.sum_in_peak_heart_zone') AS \"Peak\" FROM daily_metrics WHERE user_id = '$user_id' AND metric IN ('active_zone_minutes.sum_in_fat_burn_heart_zone', 'active_zone_minutes.sum_in_cardio_heart_zone', 'active_zone_minutes.sum_in_peak_heart_zone') GROUP BY 1 ORDER BY 1",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "m",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 2,
+            "fillOpacity": 60,
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 1003,
+      "title": "Calories",
+      "type": "timeseries",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_HEALTHEX_POSTGRES}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 62,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT metric_date AS time, MAX(value) FILTER (WHERE metric = 'total_calories.kcal_sum') AS \"Total\", MAX(value) FILTER (WHERE metric = 'active_energy_burned.kcal_sum') AS \"Active\" FROM daily_metrics WHERE user_id = '$user_id' AND metric IN ('total_calories.kcal_sum', 'active_energy_burned.kcal_sum') GROUP BY 1 ORDER BY 1",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kcal",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 1004,
+      "title": "Distance",
+      "type": "timeseries",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_HEALTHEX_POSTGRES}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 70,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT metric_date AS time, MAX(value / 1e6) FILTER (WHERE metric = 'distance.millimeters_sum') AS \"Distance\" FROM daily_metrics WHERE user_id = '$user_id' AND metric IN ('distance.millimeters_sum') GROUP BY 1 ORDER BY 1",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "lengthkm",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 2,
+            "fillOpacity": 60,
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 1005,
+      "title": "Exercises",
+      "type": "table",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_HEALTHEX_POSTGRES}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 70,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "format": "table",
+          "refId": "A",
+          "rawSql": "SELECT start_time AS \"When\", COALESCE(display_name, exercise_type) AS \"Type\", ROUND((active_seconds / 60)::numeric) AS \"Minutes\", ROUND(calories_kcal::numeric) AS \"kcal\", ROUND((distance_m / 1000)::numeric, 2) AS \"km\", avg_bpm AS \"Avg bpm\", active_zone_minutes AS \"Zone min\" FROM exercises WHERE user_id = '$user_id' AND $__timeFilter(start_time) ORDER BY start_time DESC"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {}
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "id": 1006,
+      "type": "row",
+      "title": "VITALS",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 78,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 1007,
+      "title": "Blood oxygen (SpO2, sleep)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_HEALTHEX_POSTGRES}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 79,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT metric_date AS time, MAX(value) FILTER (WHERE metric = 'daily_oxygen_saturation.average_percentage') AS \"Average\", MAX(value) FILTER (WHERE metric = 'daily_oxygen_saturation.lower_bound_percentage') AS \"Lower bound\" FROM daily_metrics WHERE user_id = '$user_id' AND metric IN ('daily_oxygen_saturation.average_percentage', 'daily_oxygen_saturation.lower_bound_percentage') GROUP BY 1 ORDER BY 1",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 1008,
+      "title": "Breathing rate (sleep)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_HEALTHEX_POSTGRES}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 79,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT metric_date AS time, MAX(value) FILTER (WHERE metric = 'daily_respiratory_rate.breaths_per_minute') AS \"Breaths / min\" FROM daily_metrics WHERE user_id = '$user_id' AND metric IN ('daily_respiratory_rate.breaths_per_minute') GROUP BY 1 ORDER BY 1",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 1009,
+      "title": "Skin temperature vs baseline (sleep)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_HEALTHEX_POSTGRES}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 87,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT metric_date AS time, MAX(value) FILTER (WHERE metric = 'daily_sleep_temperature_derivations.nightly_temperature_celsius') - MAX(value) FILTER (WHERE metric = 'daily_sleep_temperature_derivations.baseline_temperature_celsius') AS \"Deviation\" FROM daily_metrics WHERE user_id = '$user_id' AND metric LIKE 'daily_sleep_temperature_derivations.%' GROUP BY 1 ORDER BY 1",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 1010,
+      "title": "Cardio fitness (VO2 max)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_HEALTHEX_POSTGRES}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 87,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT metric_date AS time, MAX(value) FILTER (WHERE metric = 'daily_vo2_max.vo2_max') AS \"VO2 max\" FROM daily_metrics WHERE user_id = '$user_id' AND metric IN ('daily_vo2_max.vo2_max') GROUP BY 1 ORDER BY 1",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 1011,
+      "type": "row",
+      "title": "HEART RATE THROUGH THE DAY",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 95,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 1012,
+      "title": "Heart rate",
+      "type": "timeseries",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_HEALTHEX_POSTGRES}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 96,
+        "w": 24,
+        "h": 9
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT $__timeGroup(bucket_start, $__interval) AS time, ROUND(AVG(bpm_avg)) AS \"Avg\", MIN(bpm_min) AS \"Min\", MAX(bpm_max) AS \"Max\" FROM heart_rate WHERE user_id = '$user_id' AND $__timeFilter(bucket_start) GROUP BY 1 ORDER BY 1",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
     }
   ],
   "__inputs": [

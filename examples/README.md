@@ -20,7 +20,8 @@ bedtime/wake-time panels, because those bucket by local wall-clock hour.
 
 ## What it reads
 
-Plain SQL over the healthex schema — `sleep_sessions`, `daily_steps`, `daily_rhr`, `daily_hrv`. Two
+Plain SQL over the healthex schema — `sleep_sessions`, `daily_steps`, `daily_rhr`, `daily_hrv`,
+`daily_metrics`, `exercises`, `heart_rate`. Two
 notes on derived values:
 
 - **Sleep score** is healthex's own 0–100 proxy, not Fitbit's. Fitbit's uses heart rate and SpO2 that

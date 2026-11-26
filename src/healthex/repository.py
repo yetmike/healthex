@@ -8,7 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert
 
 from healthex.db import get_session
-from healthex.models import DailyHrv, DailyRhr, DailySteps, SleepSession
+from healthex.models import Base, DailyHrv, DailyRhr, DailySteps, SleepSession
 
 
 def upsert_sleep(database_url: str, rows: list[dict[str, Any]]) -> int:
@@ -102,3 +102,25 @@ def upsert_hrv(database_url: str, rows: list[dict[str, Any]]) -> int:
             )
         )
         return len(session.execute(stmt.returning(DailyHrv.id)).fetchall())
+
+
+def upsert(database_url: str, model: type[Base], rows: list[dict[str, Any]]) -> int:
+    """Upsert *rows* on *model*'s primary key, overwriting every other column.
+
+    Rows must be unique by primary key and share the same keys. Batched because
+    a backfill can exceed the 65535 bind parameters one statement may carry.
+    """
+    if not rows:
+        return 0
+    table = model.__table__
+    pk = [c.name for c in table.primary_key]
+    with get_session(database_url) as session:
+        for i in range(0, len(rows), 1000):
+            stmt = insert(model).values(rows[i : i + 1000])
+            session.execute(
+                stmt.on_conflict_do_update(
+                    index_elements=pk,
+                    set_={c.name: stmt.excluded[c.name] for c in table.columns if c.name not in pk},
+                )
+            )
+    return len(rows)

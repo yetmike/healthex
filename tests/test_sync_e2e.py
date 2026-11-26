@@ -74,6 +74,45 @@ HRV_POINT: dict[str, Any] = {
     "dataSource": {"platform": "ios"},
 }
 
+SPO2_POINT: dict[str, Any] = {
+    "dailyOxygenSaturation": {
+        "date": {"year": 2026, "month": 6, "day": 27},
+        "averagePercentage": 96.5,
+        "lowerBoundPercentage": 93.0,
+    },
+}
+
+EXERCISE_POINT: dict[str, Any] = {
+    "exercise": {
+        "interval": {
+            "startTime": "2026-06-27T08:00:00Z",
+            "endTime": "2026-06-27T08:35:00Z",
+            "civilStartTime": {"date": {"year": 2026, "month": 6, "day": 27}},
+        },
+        "exerciseType": "RUNNING",
+        "displayName": "Run",
+        "activeDuration": "1800s",
+        "metricsSummary": {
+            "caloriesKcal": 380,
+            "distanceMillimeters": 5000000,
+            "steps": "6200",
+            "averageHeartRateBeatsPerMinute": "148",
+        },
+    },
+}
+
+DISTANCE_ROLLUP: dict[str, Any] = {
+    "civilStartTime": {"date": {"year": 2026, "month": 6, "day": 27}, "time": {}},
+    "civilEndTime": {"date": {"year": 2026, "month": 6, "day": 28}, "time": {}},
+    "distance": {"millimetersSum": "7400000"},
+}
+
+HR_BUCKET: dict[str, Any] = {
+    "startTime": "2026-06-27T08:00:00Z",
+    "endTime": "2026-06-27T08:05:00Z",
+    "heartRate": {"beatsPerMinuteAvg": 141.2, "beatsPerMinuteMin": 120, "beatsPerMinuteMax": 160},
+}
+
 
 def _route_api(
     sleep: list[dict[str, Any]] | None = None,
@@ -91,6 +130,23 @@ def _route_api(
     )
     respx.get(f"{BASE}/users/me/dataTypes/daily-heart-rate-variability/dataPoints").mock(
         return_value=ok(hrv)
+    )
+    # Everything else sync asks for: one point for the types under test, and an
+    # empty answer for the rest. Registered last, so the routes above win.
+    types = f"{BASE}/users/me/dataTypes"
+    respx.get(f"{types}/daily-oxygen-saturation/dataPoints").mock(return_value=ok([SPO2_POINT]))
+    respx.get(f"{types}/exercise/dataPoints").mock(return_value=ok([EXERCISE_POINT]))
+    respx.get(url__regex=rf"{types}/[a-z0-9-]+/dataPoints(\\?.*)?$").mock(return_value=ok([]))
+
+    def rollups(*points: dict[str, Any]) -> httpx.Response:
+        return httpx.Response(200, json={"rollupDataPoints": list(points)})
+
+    respx.post(f"{types}/distance/dataPoints:dailyRollUp").mock(
+        return_value=rollups(DISTANCE_ROLLUP)
+    )
+    respx.post(f"{types}/heart-rate/dataPoints:rollUp").mock(return_value=rollups(HR_BUCKET))
+    respx.post(url__regex=rf"{types}/[a-z0-9-]+/dataPoints:(dailyRollUp|rollUp)$").mock(
+        return_value=rollups()
     )
 
 
@@ -131,6 +187,19 @@ def test_sync_writes_every_data_type_to_postgres(
         assert (
             conn.execute(text("SELECT steps FROM daily_steps WHERE user_id='e2e'")).scalar() == 9321
         )
+        metric_rows = conn.execute(
+            text("SELECT metric, value FROM daily_metrics WHERE user_id='e2e' ORDER BY 1")
+        ).all()
+        assert [tuple(r) for r in metric_rows] == [
+            ("daily_oxygen_saturation.average_percentage", 96.5),
+            ("daily_oxygen_saturation.lower_bound_percentage", 93.0),
+            ("distance.millimeters_sum", 7400000.0),
+        ]
+        run = conn.execute(
+            text("SELECT exercise_type, active_seconds, distance_m, avg_bpm FROM exercises")
+        ).one()
+        assert tuple(run) == ("RUNNING", 1800.0, 5000.0, 148)
+        assert conn.execute(text("SELECT bpm_avg FROM heart_rate")).scalar() == 141.2
         assert conn.execute(text("SELECT bpm FROM daily_rhr WHERE user_id='e2e'")).scalar() == 52
 
 
