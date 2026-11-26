@@ -31,5 +31,10 @@ def db_engine() -> Generator[Engine, None, None]:
 def clean_db(db_engine: Engine) -> Generator[None, None, None]:
     yield
     with db_engine.connect() as conn:
-        conn.execute(text("TRUNCATE TABLE sleep_sessions, daily_steps, daily_rhr, daily_hrv"))
+        conn.execute(
+            text(
+                "TRUNCATE TABLE sleep_sessions, daily_steps, daily_rhr, daily_hrv,"
+                " daily_metrics, heart_rate, exercises"
+            )
+        )
         conn.commit()

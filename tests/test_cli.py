@@ -22,6 +22,9 @@ def _mock_sync_deps() -> tuple[MagicMock, MagicMock]:
     mock_hc.list_sleep.return_value = []
     mock_hc.list_steps.return_value = []
     mock_hc.list_daily.return_value = []
+    mock_hc.list_exercises.return_value = []
+    mock_hc.daily_rollup.return_value = []
+    mock_hc.rollup.return_value = []
 
     return mock_creds, mock_hc
 

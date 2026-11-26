@@ -101,3 +101,45 @@ class DailyHrv(Base):
         UniqueConstraint("user_id", "hrv_date", name="uq_hrv_user_date"),
         Index("idx_hrv_user_date", "user_id", "hrv_date"),
     )
+
+
+class DailyMetric(Base):
+    """Long-format daily values: one row per (day, metric). See metrics.py."""
+
+    __tablename__ = "daily_metrics"
+
+    user_id: Mapped[str] = mapped_column(Text, primary_key=True)
+    metric_date: Mapped[date] = mapped_column(primary_key=True)
+    metric: Mapped[str] = mapped_column(Text, primary_key=True)
+    value: Mapped[float] = mapped_column(nullable=False)
+
+
+class HeartRate(Base):
+    """Intraday heart rate, aggregated into fixed buckets by the API."""
+
+    __tablename__ = "heart_rate"
+
+    user_id: Mapped[str] = mapped_column(Text, primary_key=True)
+    bucket_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True)
+    bpm_avg: Mapped[float] = mapped_column(nullable=False)
+    bpm_min: Mapped[float | None]
+    bpm_max: Mapped[float | None]
+
+
+class Exercise(Base):
+    __tablename__ = "exercises"
+
+    user_id: Mapped[str] = mapped_column(Text, primary_key=True)
+    start_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True)
+    end_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    civil_date: Mapped[date | None]
+    exercise_type: Mapped[str | None] = mapped_column(Text)
+    display_name: Mapped[str | None] = mapped_column(Text)
+    active_seconds: Mapped[float | None]
+    calories_kcal: Mapped[float | None]
+    distance_m: Mapped[float | None]
+    steps: Mapped[int | None]
+    avg_bpm: Mapped[int | None]
+    active_zone_minutes: Mapped[int | None]
+    elevation_gain_m: Mapped[float | None]
+    raw: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)

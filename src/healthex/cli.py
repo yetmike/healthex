@@ -5,10 +5,14 @@ from collections.abc import Callable
 
 import typer
 
-from healthex import auth, client, heart, migrate, repository
+from healthex import auth, client, heart, metrics, migrate, models, repository
 from healthex import sleep as sleep_mod
 from healthex import steps as steps_mod
 from healthex.config import settings
+
+# Intraday heart rate resolution. 5 minutes is 288 rows a day: enough to see a
+# workout or a stressful afternoon without storing every per-second sample.
+_HR_BUCKET_SECONDS = 300
 
 app = typer.Typer(help="Export Google Health sleep data to PostgreSQL.")
 auth_app = typer.Typer(help="OAuth authentication commands.")
@@ -46,7 +50,7 @@ def sync(
         None, help="PostgreSQL DSN. Overrides DATABASE_URL and .env."
     ),
 ) -> None:
-    """Fetch sleep, steps, RHR and HRV from Google Health and upsert into PostgreSQL."""
+    """Fetch sleep, activity, heart, body and exercise data from Google Health into PostgreSQL."""
     if since is not None and days is not None:
         raise typer.BadParameter("Pass either --since or --days, not both.")
     if days is not None:
@@ -90,7 +94,34 @@ def sync(
         rhr_points = fetch("rhr", lambda: hc.list_daily("daily-resting-heart-rate", since))
         hrv_points = fetch("hrv", lambda: hc.list_daily("daily-heart-rate-variability", since))
 
+        start = dt.datetime.fromisoformat(since[:19]).astimezone()  # naive = local
+        tomorrow = dt.date.today() + dt.timedelta(days=1)
+        metric_points: list[dict[str, object]] = []
+        for dtype, chunk in metrics.DAILY_ROLLUPS.items():
+            metric_points += (
+                fetch(dtype, lambda: hc.daily_rollup(dtype, start.date(), tomorrow, chunk)) or []  # noqa: B023
+            )
+        for dtype in metrics.DAILY_LISTS:
+            metric_points += fetch(dtype, lambda: hc.list_daily(dtype, since)) or []  # noqa: B023
+        exercise_points = fetch("exercise", lambda: hc.list_exercises(since)) or []
+        hr_points = (
+            fetch(
+                "heart-rate-intraday",
+                lambda: hc.rollup("heart-rate", start, dt.datetime.now(dt.UTC), _HR_BUCKET_SECONDS),
+            )
+            or []
+        )
+
     stored = dict.fromkeys(("sleep", "steps", "rhr", "hrv"), 0)
+    stored["metrics"] = repository.upsert(
+        db_url, models.DailyMetric, metrics.daily_rows(metric_points, user_id=user_id)
+    )
+    stored["exercises"] = repository.upsert(
+        db_url, models.Exercise, metrics.exercise_rows(exercise_points, user_id=user_id)
+    )
+    stored["heart_rate"] = repository.upsert(
+        db_url, models.HeartRate, metrics.heart_rate_rows(hr_points, user_id=user_id)
+    )
 
     if sleep_points:
         rows = [sleep_mod.parse_session(p, user_id=user_id) for p in sleep_points]
